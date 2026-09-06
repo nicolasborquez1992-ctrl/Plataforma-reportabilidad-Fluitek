@@ -126,7 +126,7 @@ fluitek_app_html = """
             <div class="flex flex-1 gap-3 w-full md:w-auto">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por Cliente, Tag de Equipo, Técnico..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por OT, Cliente, Tag, Técnico..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
                 </div>
                 <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
                     <option value="ALL">Todas las Criticidades</option>
@@ -153,7 +153,7 @@ fluitek_app_html = """
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b">
-                            <th class="p-4">Folio / Fecha</th>
+                            <th class="p-4">Folio / OT</th>
                             <th class="p-4">Cliente / Faena</th>
                             <th class="p-4">Equipo / Tag</th>
                             <th class="p-4">Tipo de Servicio</th>
@@ -188,9 +188,9 @@ fluitek_app_html = """
 
             <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg mb-6 border text-xs">
                 <div>
+                    <p><strong class="text-slate-700">Orden de Trabajo (OT):</strong> <span id="previewOT" class="font-bold text-slate-900">-</span></p>
                     <p><strong class="text-slate-700">Cliente:</strong> <span id="previewCliente">-</span></p>
                     <p><strong class="text-slate-700">Faena / Planta:</strong> <span id="previewFaena">-</span></p>
-                    <p><strong class="text-slate-700">Ubicación GPS:</strong> <span id="previewGPS">-</span></p>
                 </div>
                 <div>
                     <p><strong class="text-slate-700">Equipo / Tag:</strong> <span id="previewTag">-</span></p>
@@ -266,6 +266,11 @@ fluitek_app_html = """
             <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
                 <input type="hidden" id="reportId">
 
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Orden de Trabajo (OT) *</label>
+                    <input type="text" id="inputOT" required placeholder="Ej: OT-10452" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
@@ -325,16 +330,6 @@ fluitek_app_html = """
                 </div>
 
                 <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-bold text-slate-700">Coordenadas / Ubicación GPS</label>
-                        <button type="button" onclick="getGPSLocation()" class="text-xs text-fluitek-600 hover:underline flex items-center">
-                            <i class="fa-solid fa-location-crosshairs mr-1"></i> Capturar GPS Actual
-                        </button>
-                    </div>
-                    <input type="text" id="inputGPS" placeholder="-27.5738, -70.7582" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                </div>
-
-                <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
                     <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
                 </div>
@@ -363,6 +358,7 @@ fluitek_app_html = """
         const sampleReports = [
             {
                 id: "FLT-2026-001",
+                ot: "OT-8840",
                 fecha: "2026-09-05 14:30",
                 cliente: "Minera Pelambres",
                 faena: "Planta Concentradora",
@@ -373,12 +369,12 @@ fluitek_app_html = """
                 temp: 78,
                 presion: 2100,
                 iso: "21/19/16",
-                gps: "-31.8722, -70.5211",
                 diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
                 recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
             },
             {
                 id: "FLT-2026-002",
+                ot: "OT-8841",
                 fecha: "2026-09-06 09:15",
                 cliente: "Atacama Minerals",
                 faena: "Mina Subterránea",
@@ -389,12 +385,12 @@ fluitek_app_html = """
                 temp: 62,
                 presion: 1450,
                 iso: "18/16/13",
-                gps: "-27.3667, -70.3333",
                 diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
                 recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
             },
             {
                 id: "FLT-2026-003",
+                ot: "OT-8842",
                 fecha: "2026-09-06 11:00",
                 cliente: "Candelaria",
                 faena: "Área Chancado",
@@ -405,7 +401,6 @@ fluitek_app_html = """
                 temp: 45,
                 presion: 1200,
                 iso: "15/13/10",
-                gps: "-27.5738, -70.7582",
                 diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
                 recomendaciones: "Continuar con plan estándar de lubricación preventiva."
             }
@@ -448,6 +443,7 @@ fluitek_app_html = """
                 const matchesSearch = r.cliente.toLowerCase().includes(search) || 
                                      r.tag.toLowerCase().includes(search) || 
                                      r.inspector.toLowerCase().includes(search) ||
+                                     (r.ot && r.ot.toLowerCase().includes(search)) ||
                                      r.id.toLowerCase().includes(search);
                 const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
                 const matchesType = (type === 'ALL') || (r.tipo === type);
@@ -481,6 +477,7 @@ fluitek_app_html = """
                     tr.innerHTML = `
                         <td class="p-4">
                             <span class="font-bold text-fluitek-800">${r.id}</span>
+                            <div class="text-xs text-amber-600 font-semibold">${r.ot || '-'}</div>
                             <div class="text-xs text-slate-400">${r.fecha}</div>
                         </td>
                         <td class="p-4">
@@ -527,21 +524,6 @@ fluitek_app_html = """
             document.getElementById('reportModal').classList.add('hidden');
         }
 
-        function getGPSLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lng = position.coords.longitude.toFixed(4);
-                    document.getElementById('inputGPS').value = `${lat}, ${lng}`;
-                }, () => {
-                    alert('No se pudo obtener la geolocalización. Se usará una por defecto.');
-                    document.getElementById('inputGPS').value = "-27.5738, -70.7582";
-                });
-            } else {
-                alert('Geolocalización no soportada por su navegador.');
-            }
-        }
-
         function saveReport(e) {
             e.preventDefault();
             const idInput = document.getElementById('reportId').value;
@@ -553,6 +535,7 @@ fluitek_app_html = """
                 if (index !== -1) {
                     reports[index] = {
                         ...reports[index],
+                        ot: document.getElementById('inputOT').value,
                         cliente: document.getElementById('inputCliente').value,
                         faena: document.getElementById('inputFaena').value,
                         tag: document.getElementById('inputTag').value,
@@ -562,7 +545,6 @@ fluitek_app_html = """
                         temp: document.getElementById('inputTemp').value || '-',
                         presion: document.getElementById('inputPresion').value || '-',
                         iso: document.getElementById('inputISO').value || '-',
-                        gps: document.getElementById('inputGPS').value || 'N/A',
                         diagnostico: document.getElementById('inputDiagnostico').value,
                         recomendaciones: document.getElementById('inputRecomendaciones').value
                     };
@@ -570,7 +552,8 @@ fluitek_app_html = """
             } else {
                 const folioNum = String(reports.length + 1).padStart(3, '0');
                 const newReport = {
-                    id: `FLT-2026-${folioNum}`,
+                    id: FLT-2026-${folioNum},
+                    ot: document.getElementById('inputOT').value,
                     fecha: dateStr,
                     cliente: document.getElementById('inputCliente').value,
                     faena: document.getElementById('inputFaena').value,
@@ -581,7 +564,6 @@ fluitek_app_html = """
                     temp: document.getElementById('inputTemp').value || '-',
                     presion: document.getElementById('inputPresion').value || '-',
                     iso: document.getElementById('inputISO').value || '-',
-                    gps: document.getElementById('inputGPS').value || 'N/A',
                     diagnostico: document.getElementById('inputDiagnostico').value,
                     recomendaciones: document.getElementById('inputRecomendaciones').value
                 };
@@ -598,6 +580,7 @@ fluitek_app_html = """
             if (!item) return;
 
             document.getElementById('reportId').value = item.id;
+            document.getElementById('inputOT').value = item.ot || '';
             document.getElementById('inputCliente').value = item.cliente;
             document.getElementById('inputFaena').value = item.faena;
             document.getElementById('inputTag').value = item.tag;
@@ -607,16 +590,15 @@ fluitek_app_html = """
             document.getElementById('inputTemp').value = item.temp || '';
             document.getElementById('inputPresion').value = item.presion || '';
             document.getElementById('inputISO').value = item.iso || '';
-            document.getElementById('inputGPS').value = item.gps || '';
             document.getElementById('inputDiagnostico').value = item.diagnostico;
             document.getElementById('inputRecomendaciones').value = item.recomendaciones;
 
-            document.getElementById('modalTitle').innerText = `Editar Reporte ${item.id}`;
+            document.getElementById('modalTitle').innerText = Editar Reporte ${item.id};
             document.getElementById('reportModal').classList.remove('hidden');
         }
 
         function deleteReport(id) {
-            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
+            if (confirm(¿Está seguro de eliminar el reporte ${id}?)) {
                 reports = reports.filter(r => r.id !== id);
                 saveToStorage();
                 renderReports();
@@ -627,11 +609,11 @@ fluitek_app_html = """
             const item = reports.find(r => r.id === id);
             if (!item) return;
 
-            document.getElementById('previewFolio').innerText = `FOLIO: ${item.id}`;
-            document.getElementById('previewFecha').innerText = `Fecha: ${item.fecha}`;
+            document.getElementById('previewFolio').innerText = FOLIO: ${item.id};
+            document.getElementById('previewOT').innerText = item.ot || '-';
+            document.getElementById('previewFecha').innerText = Fecha: ${item.fecha};
             document.getElementById('previewCliente').innerText = item.cliente;
             document.getElementById('previewFaena').innerText = item.faena;
-            document.getElementById('previewGPS').innerText = item.gps;
             document.getElementById('previewTag').innerText = item.tag;
             document.getElementById('previewTipo').innerText = item.tipo;
             document.getElementById('previewInspector').innerText = item.inspector;
@@ -672,24 +654,24 @@ fluitek_app_html = """
             }
 
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\\n";
+            csvContent += "Folio,OT,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,Diagnostico,Recomendaciones\\n";
 
             reports.forEach(r => {
                 const row = [
-                    `"${r.id}"`,
-                    `"${r.fecha}"`,
-                    `"${r.cliente}"`,
-                    `"${r.faena}"`,
-                    `"${r.tag}"`,
-                    `"${r.tipo}"`,
-                    `"${r.criticidad}"`,
-                    `"${r.inspector}"`,
-                    `"${r.temp}"`,
-                    `"${r.presion}"`,
-                    `"${r.iso}"`,
-                    `"${r.gps}"`,
-                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
-                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
+                    "${r.id}",
+                    "${r.ot || ''}",
+                    "${r.fecha}",
+                    "${r.cliente}",
+                    "${r.faena}",
+                    "${r.tag}",
+                    "${r.tipo}",
+                    "${r.criticidad}",
+                    "${r.inspector}",
+                    "${r.temp}",
+                    "${r.presion}",
+                    "${r.iso}",
+                    "${(r.diagnostico || '').replace(/"/g, '""')}",
+                    "${(r.recomendaciones || '').replace(/"/g, '""')}"
                 ].join(",");
                 csvContent += row + "\\n";
             });
@@ -697,7 +679,7 @@ fluitek_app_html = """
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
