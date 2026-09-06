@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 # Configuración de la página en Streamlit
 st.set_page_config(
-    page_title="Fluitek Marco - Reportes Técnicos",
+    page_title="Fluitek Marco- Reportes Técnicos",
     page_icon="⚙️",
     layout="wide",
     initial_sidebar_state="collapsed"
