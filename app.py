@@ -1,16 +1,3 @@
-import streamlit as st
-import streamlit.components.v1 as components
-
-# Configuración de la página en Streamlit
-st.set_page_config(
-    page_title="Fluitek - Reportes Técnicos",
-    page_icon="⚙️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
-fluitek_app_html = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -173,7 +160,7 @@ fluitek_app_html = """
             </div>
         </div>
 
-        <!-- Printable Official Report View -->
+        <!-- Printable Official Report View (Hidden in web dashboard, displayed in print mode or preview modal) -->
         <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
             <div class="flex justify-between items-start border-b pb-4 mb-6">
                 <div>
@@ -227,12 +214,12 @@ fluitek_app_html = """
 
             <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t text-center text-xs">
                 <div>
-                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Firma Inspector</div>
+                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 font-signature text-slate-600">Firma Inspector</div>
                     <p class="font-bold" id="previewFirmaTecnico">Técnico Fluitek</p>
                     <p class="text-slate-500">Especialista en Monitoreo de Condición</p>
                 </div>
                 <div>
-                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Aprobación Cliente</div>
+                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 font-signature text-slate-600">Aprobación Cliente</div>
                     <p class="font-bold">Recepción Cliente / Supervisión</p>
                     <p class="text-slate-500">Conforme / Notificado</p>
                 </div>
@@ -360,6 +347,7 @@ fluitek_app_html = """
     <script>
         let reports = [];
 
+        // Initial sample data tailored for Fluitek
         const sampleReports = [
             {
                 id: "FLT-2026-001",
@@ -411,6 +399,7 @@ fluitek_app_html = """
             }
         ];
 
+        // Initialize application
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('fluitek_reports');
             if (saved) {
@@ -454,6 +443,7 @@ fluitek_app_html = """
                 return matchesSearch && matchesSeverity && matchesType;
             });
 
+            // Update KPIs
             document.getElementById('kpi-total').innerText = reports.length;
             document.getElementById('kpi-critical').innerText = reports.filter(r => r.criticidad === 'ALTA').length;
             document.getElementById('kpi-warning').innerText = reports.filter(r => r.criticidad === 'MEDIA').length;
@@ -532,7 +522,7 @@ fluitek_app_html = """
                 navigator.geolocation.getCurrentPosition(position => {
                     const lat = position.coords.latitude.toFixed(4);
                     const lng = position.coords.longitude.toFixed(4);
-                    document.getElementById('inputGPS').value = ${lat}, ${lng};
+                    document.getElementById('inputGPS').value = `${lat}, ${lng}`;
                 }, () => {
                     alert('No se pudo obtener la geolocalización. Se usará una por defecto.');
                     document.getElementById('inputGPS').value = "-27.5738, -70.7582";
@@ -549,6 +539,7 @@ fluitek_app_html = """
             const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
 
             if (idInput) {
+                // Update existing
                 const index = reports.findIndex(r => r.id === idInput);
                 if (index !== -1) {
                     reports[index] = {
@@ -568,9 +559,10 @@ fluitek_app_html = """
                     };
                 }
             } else {
+                // Create new with incremental Folio
                 const folioNum = String(reports.length + 1).padStart(3, '0');
                 const newReport = {
-                    id: FLT-2026-${folioNum},
+                    id: `FLT-2026-${folioNum}`,
                     fecha: dateStr,
                     cliente: document.getElementById('inputCliente').value,
                     faena: document.getElementById('inputFaena').value,
@@ -611,12 +603,12 @@ fluitek_app_html = """
             document.getElementById('inputDiagnostico').value = item.diagnostico;
             document.getElementById('inputRecomendaciones').value = item.recomendaciones;
 
-            document.getElementById('modalTitle').innerText = Editar Reporte ${item.id};
+            document.getElementById('modalTitle').innerText = `Editar Reporte ${item.id}`;
             document.getElementById('reportModal').classList.remove('hidden');
         }
 
         function deleteReport(id) {
-            if (confirm(¿Está seguro de eliminar el reporte ${id}?)) {
+            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
                 reports = reports.filter(r => r.id !== id);
                 saveToStorage();
                 renderReports();
@@ -627,8 +619,8 @@ fluitek_app_html = """
             const item = reports.find(r => r.id === id);
             if (!item) return;
 
-            document.getElementById('previewFolio').innerText = FOLIO: ${item.id};
-            document.getElementById('previewFecha').innerText = Fecha: ${item.fecha};
+            document.getElementById('previewFolio').innerText = `FOLIO: ${item.id}`;
+            document.getElementById('previewFecha').innerText = `Fecha: ${item.fecha}`;
             document.getElementById('previewCliente').innerText = item.cliente;
             document.getElementById('previewFaena').innerText = item.faena;
             document.getElementById('previewGPS').innerText = item.gps;
@@ -672,32 +664,32 @@ fluitek_app_html = """
             }
 
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\\n";
+            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\n";
 
             reports.forEach(r => {
                 const row = [
-                    "${r.id}",
-                    "${r.fecha}",
-                    "${r.cliente}",
-                    "${r.faena}",
-                    "${r.tag}",
-                    "${r.tipo}",
-                    "${r.criticidad}",
-                    "${r.inspector}",
-                    "${r.temp}",
-                    "${r.presion}",
-                    "${r.iso}",
-                    "${r.gps}",
-                    "${(r.diagnostico || '').replace(/"/g, '""')}",
-                    "${(r.recomendaciones || '').replace(/"/g, '""')}"
+                    `"${r.id}"`,
+                    `"${r.fecha}"`,
+                    `"${r.cliente}"`,
+                    `"${r.faena}"`,
+                    `"${r.tag}"`,
+                    `"${r.tipo}"`,
+                    `"${r.criticidad}"`,
+                    `"${r.inspector}"`,
+                    `"${r.temp}"`,
+                    `"${r.presion}"`,
+                    `"${r.iso}"`,
+                    `"${r.gps}"`,
+                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
+                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
                 ].join(",");
-                csvContent += row + "\\n";
+                csvContent += row + "\n";
             });
 
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv);
+            link.setAttribute("download", `Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -705,7 +697,3 @@ fluitek_app_html = """
     </script>
 </body>
 </html>
-"""
-
-# Inyección del HTML dentro del componente de Streamlit
-components.html(fluitek_app_html, height=1000, scrolling=True)
