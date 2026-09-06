@@ -1,562 +1,699 @@
-import streamlit as st
-import pandas as pd
-import folium
-from streamlit_folium import st_folium
-import plotly.express as px
-from datetime import datetime
-from PIL import Image
-from streamlit_js_eval import get_geolocation
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import io
-import os
-
-# Librerías para generación de PDF
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-
-# ----------------------------------------------------
-# Configuración Inicial y Carpeta de Fotos
-# ----------------------------------------------------
-st.set_page_config(
-    page_title="Vallenar Avanza - Gestión Territorial y Atención Ciudadana",
-    page_icon="🚀",
-    layout="wide"
-)
-
-# Crear la carpeta para guardar fotos reportadas si no existe
-CARPETA_FOTOS = "fotos_reportes"
-if not os.path.exists(CARPETA_FOTOS):
-    os.makedirs(CARPETA_FOTOS)
-
-# URL del logo de Vallenar
-URL_LOGO_VALLENAR = "https://upload.wikimedia.org/wikipedia/commons/2/27/Escudo_de_Vallenar.svg"
-
-# CSS Personalizado Mejorado y con más Color
-st.markdown("""
-    <style>
-    /* Estilo del Título Principal */
-    .main-title { 
-        font-size: 2.3rem; 
-        font-weight: 800; 
-        background: linear-gradient(90deg, #1E3A8A 0%, #0D9488 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 0; 
-        line-height: 1.2; 
-    }
-    .sub-title { 
-        font-size: 1rem; 
-        color: #4B5563; 
-        margin-top: 4px; 
-        font-weight: 500; 
-    }
-    .badge-vallenar { 
-        background: linear-gradient(135deg, #059669 0%, #1E3A8A 100%);
-        color: white; 
-        padding: 5px 12px; 
-        border-radius: 8px; 
-        font-size: 0.8rem; 
-        font-weight: 700; 
-        display: inline-block; 
-        margin-bottom: 6px;
-        letter-spacing: 0.5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    /* Personalización de Selectbox e Inputs */
-    div[data-baseweb="select"] {
-        border: 2px solid #0D9488 !important;
-        border-radius: 8px !important;
-    }
-    
-    /* Tarjetas de Métricas Personalizadas */
-    .metric-card {
-        background: white;
-        border-radius: 12px;
-        padding: 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        border-left: 5px solid #1E3A8A;
-        text-align: center;
-    }
-    .metric-card.pendiente { border-left-color: #EF4444; }
-    .metric-card.proceso { border-left-color: #F59E0B; }
-    .metric-card.resuelto { border-left-color: #10B981; }
-    
-    .metric-val {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #1F2937;
-    }
-    .metric-lbl {
-        font-size: 0.85rem;
-        color: #6B7280;
-        font-weight: 600;
-    }
-
-    /* Footer Estilizado */
-    .footer-card {
-        background: linear-gradient(135deg, #1E3A8A 0%, #0D9488 100%);
-        color: white;
-        padding: 30px 20px;
-        border-radius: 16px;
-        text-align: center;
-        margin-top: 40px;
-        box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.3);
-    }
-    .footer-card h3 {
-        color: #FACC15 !important;
-        font-size: 1.4rem;
-        font-weight: 800;
-        margin-bottom: 8px;
-    }
-    .footer-card p {
-        font-size: 0.95rem;
-        color: #E0E7FF;
-        margin-bottom: 16px;
-    }
-    .footer-badges {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-top: 15px;
-    }
-    .footer-badge-item {
-        background: rgba(255, 255, 255, 0.18);
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-LAT_VALLENAR = -28.5750
-LON_VALLENAR = -70.7580
-CLAVE_ADMIN = "vallenar2026"
-EXCEL_FILE = "reportes_vallenar.xlsx"
-
-# ----------------------------------------------------
-# Manejo de Persistencia en Excel
-# ----------------------------------------------------
-def cargar_datos_excel():
-    if os.path.exists(EXCEL_FILE):
-        try:
-            df = pd.read_excel(EXCEL_FILE)
-            if "obs_municipal" not in df.columns:
-                df["obs_municipal"] = "En espera de revisión."
-            if "foto_path" not in df.columns:
-                df["foto_path"] = "Sin foto"
-            return df
-        except Exception:
-            pass
-    
-    data_inicial = [
-        {
-            "id": 1,
-            "fecha": "2026-09-01",
-            "sector": "Torreblanca",
-            "categoria": "Bache / Evento en Calzada",
-            "lat": -28.5710,
-            "lon": -70.7620,
-            "estado": "Pendiente",
-            "comentario": "Evento de gran profundidad cerca de la escuela.",
-            "prioridad": "Alta",
-            "contacto": "vecino.torreblanca@gmail.com",
-            "obs_municipal": "Asignado a cuadrilla de obras.",
-            "foto_path": "Sin foto"
-        },
-        {
-            "id": 2,
-            "fecha": "2026-09-02",
-            "sector": "Centro",
-            "categoria": "Luminaria Defectuosa",
-            "lat": -28.5760,
-            "lon": -70.7560,
-            "estado": "En Proceso",
-            "comentario": "Luminaria apagada en calle Prat.",
-            "prioridad": "Media",
-            "contacto": "comercio.centro@vallenar.cl",
-            "obs_municipal": "Repuestos solicitados en bodega.",
-            "foto_path": "Sin foto"
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluitek - Sistema de Reportes Técnicos y Monitoreo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fluitek: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0a3651',
+                        }
+                    }
+                }
+            }
         }
-    ]
-    df = pd.DataFrame(data_inicial)
-    try:
-        df.to_excel(EXCEL_FILE, index=False)
-    except Exception:
-        pass
-    return df
+    </script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+            .print-card { border: 1px solid #ccc; box-shadow: none !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
-def guardar_datos_excel(df):
-    try:
-        df.to_excel(EXCEL_FILE, index=False)
-    except Exception as e:
-        st.error(f"Error al guardar datos en Excel: {e}")
-
-if "incidencias" not in st.session_state:
-    st.session_state.incidencias = cargar_datos_excel()
-
-sectores_vallenar = ["Centro", "Torreblanca", "Hda ventanas", "Hda cavancha", "Las Pircas", "Hda buena esperanza", "Regidores", "Vista alegre", "Hda compañia", "Altos del valle", "San Ambrosio", "Baquedano", "Quinta Valle", "Ventanas", "O'Higgins", "Hermanos Carrera", "Otro Sector"]
-
-# ----------------------------------------------------
-# Módulo 1: Envío de Notificaciones por Correo
-# ----------------------------------------------------
-def enviar_correo_notificacion(destinatario, id_reporte, nuevo_estado, categoria, sector):
-    if not destinatario or "@" not in destinatario or destinatario == "No especificado":
-        return False, "No se registró un correo válido para este reporte."
-
-    asunto = f"🔔 Actualización de Reporte #{id_reporte} - Ilustre Municipalidad de Vallenar"
-    cuerpo = f"""
-    Estimado/a vecino/a,
-
-    Le informamos que su reporte ingresado en la plataforma 'Vallenar Avanza' ha cambiado de estado:
-
-      • Folio: #{id_reporte}
-      • Tipo de Incidencia: {categoria}
-      • Sector: {sector}
-      • Nuevo Estado: {nuevo_estado.upper()}
-
-    Agradecemos su valiosa colaboración para seguir construyendo una mejor comuna.
-
-    Atentamente,
-    Ilustre Municipalidad de Vallenar
-    """
-
-    msg = MIMEMultipart()
-    msg['From'] = "contacto.vallenar.avanza@gmail.com"
-    msg['To'] = destinatario
-    msg['Subject'] = asunto
-    msg.attach(MIMEText(cuerpo, 'plain'))
-
-    try:
-        return True, "Simulación: correo preparado correctamente."
-    except Exception as e:
-        return False, str(e)
-
-# ----------------------------------------------------
-# Módulo 2: Generador de Informes PDF
-# ----------------------------------------------------
-def generar_pdf_gestion(df_data):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
-    story = []
-    styles = getSampleStyleSheet()
-    
-    story.append(Paragraph("<b>ILUSTRE MUNICIPALIDAD DE VALLENAR</b>", styles['Heading1']))
-    story.append(Paragraph("<b>INFORME DE GESTIÓN DE INCIDENCIAS URBANAS - VALLENAR AVANZA</b>", styles['Normal']))
-    story.append(Paragraph(f"Fecha de emisión: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
-    story.append(Spacer(1, 15))
-
-    table_data = [["Folio", "Fecha", "Sector", "Categoría", "Estado"]]
-    for _, row in df_data.iterrows():
-        table_data.append([f"#{row['id']}", str(row["fecha"]), str(row["sector"]), str(row["categoria"]), str(row["estado"])])
-
-    t = Table(table_data, colWidths=[40, 70, 90, 190, 80])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0D9488")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#D1D5DB")),
-    ]))
-    
-    story.append(t)
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-# ----------------------------------------------------
-# Encabezado Principal
-# ----------------------------------------------------
-col_logo, col_encabezado, col_menu = st.columns([0.4, 1.4, 1])
-
-with col_logo:
-    try:
-        st.image(URL_LOGO_VALLENAR, width=90)
-    except Exception:
-        st.write("🏛️")
-
-with col_encabezado:
-    st.markdown("""
-        <div>
-            <span class="badge-vallenar">ILUSTRE MUNICIPALIDAD DE VALLENAR</span>
-            <h1 class="main-title">🚀 Vallenar Avanza</h1>
-            <p class="sub-title">Plataforma Digital de Gestión Territorial y Atención Ciudadana</p>
+    <!-- Top Navigation Bar -->
+    <header class="bg-fluitek-900 text-white shadow-lg no-print sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-fluitek-500 text-white font-black text-xl px-3 py-1 rounded shadow tracking-wider">
+                    FLUITEK
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">Field & Technical Reports</h1>
+                    <p class="text-xs text-slate-300">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openNewReportModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center shadow">
+                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte
+                </button>
+                <button onclick="exportDataCSV()" class="bg-fluitek-700 hover:bg-fluitek-600 text-white px-3 py-2 rounded-lg text-sm transition flex items-center">
+                    <i class="fa-solid fa-file-excel mr-2"></i> CSV
+                </button>
+            </div>
         </div>
-    """, unsafe_allow_html=True)
+    </header>
 
-with col_menu:
-    opcion_menu = st.selectbox(
-        "📌 Navegación:",
-        ["📝 Crear Nuevo Reporte", "🗺️ Mapa y Reportes", "⚙️ Panel de Administración"],
-        index=0
-    )
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
 
-st.markdown("---")
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-fluitek-600 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Total Reportes</p>
+                    <h3 id="kpi-total" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-fluitek-100 text-fluitek-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+            </div>
 
-# ----------------------------------------------------
-# VISTA 1: CREAR NUEVO REPORTE
-# ----------------------------------------------------
-if opcion_menu == "📝 Crear Nuevo Reporte":
-    st.subheader("📝 Formulario de Reporte Ciudadano")
-    
-    sector_input = st.selectbox("Sector / Barrio:", sectores_vallenar)
-    cat_input = st.selectbox(
-        "Categoría del Problema:", 
-        ["Bache / Evento en Calzada", "Luminaria Defectuosa", "Microbasural / Escombros", "Fuga de Agua / Alcantarillado", "Semáforo Defectuoso", "Señaletica Dañada", "Arbolado / Peligro de Caída"]
-    )
-    prioridad_input = st.select_slider("Urgencia Estimada:", options=["Baja", "Media", "Alta", "Crítica"])
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Criticidad Alta / Alarma</p>
+                    <h3 id="kpi-critical" class="text-2xl font-bold text-red-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
 
-    location = get_geolocation()
-    if location and "coords" in location:
-        lat_input = float(location["coords"]["latitude"])
-        lon_input = float(location["coords"]["longitude"])
-        st.success(f"📍 Coordenadas GPS Capturadas: {lat_input:.4f}, {lon_input:.4f}")
-    else:
-        lat_input, lon_input = LAT_VALLENAR, LON_VALLENAR
-        st.info("📍 Usando ubicación central de Vallenar")
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">En Advertencia</p>
+                    <h3 id="kpi-warning" class="text-2xl font-bold text-amber-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+            </div>
 
-    comentario_input = st.text_area("Descripción detallada de la incidencia:")
-    contacto_input = st.text_input("Correo electrónico del vecino:", placeholder="ejemplo@correo.cl")
-    foto_input = st.file_uploader("Adjuntar Foto / Evidencia (JPG, PNG):", type=["jpg", "png", "jpeg"])
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Condición Normal</p>
+                    <h3 id="kpi-normal" class="text-2xl font-bold text-emerald-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+        </div>
 
-    if st.button("🚀 Enviar Reporte a la Municipalidad", use_container_width=True):
-        if comentario_input.strip() == "":
-            st.warning("Por favor agrega una breve descripción del problema.")
-        else:
-            df_actual = st.session_state.incidencias
-            nuevo_id = int(df_actual["id"].max() + 1) if len(df_actual) > 0 else 1
-            
-            foto_path_guardada = "Sin foto"
-            if foto_input is not None:
-                ext = foto_input.name.split(".")[-1]
-                nombre_archivo = f"reporte_{nuevo_id}{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}"
-                foto_path_guardada = os.path.join(CARPETA_FOTOS, nombre_archivo)
-                
-                img = Image.open(foto_input)
-                img.save(foto_path_guardada)
+        <!-- Filter & Search Controls -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
+            <div class="flex flex-1 gap-3 w-full md:w-auto">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por Cliente, Tag de Equipo, Técnico..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                </div>
+                <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <option value="ALL">Todas las Criticidades</option>
+                    <option value="ALTA">Alta / Alarma</option>
+                    <option value="MEDIA">Advertencia</option>
+                    <option value="NORMAL">Normal</option>
+                </select>
+                <select id="filterType" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <option value="ALL">Todos los Tipos</option>
+                    <option value="Monitoreo de Condición">Monitoreo de Condición</option>
+                    <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
+                    <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
+                    <option value="Inspección General">Inspección General</option>
+                </select>
+            </div>
+            <button onclick="loadSampleData()" class="text-xs text-fluitek-600 hover:text-fluitek-800 underline font-medium">
+                <i class="fa-solid fa-rotate-left mr-1"></i> Cargar Datos de Ejemplo
+            </button>
+        </div>
 
-            nueva_fila = pd.DataFrame([{
-                "id": nuevo_id,
-                "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "sector": sector_input,
-                "categoria": cat_input,
-                "lat": lat_input,
-                "lon": lon_input,
-                "estado": "Pendiente",
-                "comentario": comentario_input,
-                "prioridad": prioridad_input,
-                "contacto": contacto_input.strip() if contacto_input.strip() != "" else "No especificado",
-                "obs_municipal": "En espera de revisión.",
-                "foto_path": foto_path_guardada
-            }])
-            
-            st.session_state.incidencias = pd.concat([st.session_state.incidencias, nueva_fila], ignore_index=True)
-            guardar_datos_excel(st.session_state.incidencias)
-            st.success(f"✅ ¡Reporte #{nuevo_id} ingresado exitosamente en Vallenar Avanza!")
+        <!-- Reports Table View -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden no-print">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b">
+                            <th class="p-4">Folio / Fecha</th>
+                            <th class="p-4">Cliente / Faena</th>
+                            <th class="p-4">Equipo / Tag</th>
+                            <th class="p-4">Tipo de Servicio</th>
+                            <th class="p-4">Criticidad</th>
+                            <th class="p-4">Inspector</th>
+                            <th class="p-4 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportsTableBody" class="divide-y text-sm">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="p-8 text-center text-slate-500 hidden">
+                <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
+                <p>No se encontraron reportes con los filtros seleccionados.</p>
+            </div>
+        </div>
 
-# ----------------------------------------------------
-# VISTA 2: MAPA Y REPORTES
-# ----------------------------------------------------
-elif opcion_menu == "🗺️ Mapa y Reportes":
-    df = st.session_state.incidencias
+        <!-- Printable Official Report View (Hidden in web dashboard, displayed in print mode or preview modal) -->
+        <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
+            <div class="flex justify-between items-start border-b pb-4 mb-6">
+                <div>
+                    <div class="text-2xl font-black text-fluitek-800 tracking-wider">FLUITEK CHILE</div>
+                    <p class="text-xs text-slate-500">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
+                </div>
+                <div class="text-right">
+                    <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
+                    <p id="previewFecha" class="text-xs text-slate-500">Fecha: 06/09/2026</p>
+                </div>
+            </div>
 
-    # Métricas con Tarjetas Visuales Coloridas
-    m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.markdown(f'<div class="metric-card"><div class="metric-val">{len(df)}</div><div class="metric-lbl">Total Incidentes</div></div>', unsafe_allow_html=True)
-    with m2:
-        st.markdown(f'<div class="metric-card pendiente"><div class="metric-val">{len(df[df["estado"] == "Pendiente"])}</div><div class="metric-lbl">Pendientes</div></div>', unsafe_allow_html=True)
-    with m3:
-        st.markdown(f'<div class="metric-card proceso"><div class="metric-val">{len(df[df["estado"] == "En Proceso"])}</div><div class="metric-lbl">En Proceso</div></div>', unsafe_allow_html=True)
-    with m4:
-        st.markdown(f'<div class="metric-card resuelto"><div class="metric-val">{len(df[df["estado"] == "Resuelto"])}</div><div class="metric-lbl">Resueltos</div></div>', unsafe_allow_html=True)
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg mb-6 border text-xs">
+                <div>
+                    <p><strong class="text-slate-700">Cliente:</strong> <span id="previewCliente">-</span></p>
+                    <p><strong class="text-slate-700">Faena / Planta:</strong> <span id="previewFaena">-</span></p>
+                    <p><strong class="text-slate-700">Ubicación GPS:</strong> <span id="previewGPS">-</span></p>
+                </div>
+                <div>
+                    <p><strong class="text-slate-700">Equipo / Tag:</strong> <span id="previewTag">-</span></p>
+                    <p><strong class="text-slate-700">Tipo Servicio:</strong> <span id="previewTipo">-</span></p>
+                    <p><strong class="text-slate-700">Inspector Fluitek:</strong> <span id="previewInspector">-</span></p>
+                </div>
+            </div>
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("🔍 Filtros de Búsqueda")
-    
-    col_f1, col_f2, col_f3 = st.columns(3)
-    with col_f1:
-        filtro_sector = st.multiselect("Sector:", options=sectores_vallenar, default=[], placeholder="Seleccionar opciones...")
-    with col_f2:
-        filtro_estado = st.multiselect("Estado:", options=["Pendiente", "En Proceso", "Resuelto"], default=[], placeholder="Seleccionar opciones...")
-    with col_f3:
-        filtro_urgencia = st.multiselect("Urgencia:", options=["Baja", "Media", "Alta", "Crítica"], default=[], placeholder="Seleccionar opciones...")
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">ESTADO & CRITICIDAD DEL EQUIPO</h4>
+                <div id="previewBadgeCriticidad" class="inline-block px-4 py-2 rounded font-bold text-sm mb-2">
+                    CRITICIDAD ALTA
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-xs bg-slate-100 p-3 rounded mt-2">
+                    <div><strong>Temp. Operación:</strong> <span id="previewTemp">-</span> °C</div>
+                    <div><strong>Presión / Flujo:</strong> <span id="previewPresion">-</span> PSI</div>
+                    <div><strong>Nivel ISO Contaminación:</strong> <span id="previewISO">-</span></div>
+                </div>
+            </div>
 
-    df_filtrado = df.copy()
-    if filtro_sector: 
-        df_filtrado = df_filtrado[df_filtrado["sector"].isin(filtro_sector)]
-    if filtro_estado: 
-        df_filtrado = df_filtrado[df_filtrado["estado"].isin(filtro_estado)]
-    if filtro_urgencia: 
-        df_filtrado = df_filtrado[df_filtrado["prioridad"].isin(filtro_urgencia)]
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">DIAGNÓSTICO TÉCNICO & HALLAZGOS</h4>
+                <p id="previewDiagnostico" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 p-3 rounded border">
+                    Sin observaciones registrados.
+                </p>
+            </div>
 
-    col_mapa, col_grafico = st.columns([1.8, 1])
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">RECOMENDACIONES DE ACCIÓN</h4>
+                <p id="previewRecomendaciones" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-amber-50/50 p-3 rounded border border-amber-200">
+                    Sin recomendaciones.
+                </p>
+            </div>
 
-    with col_mapa:
-        st.subheader(f"🗺️ Mapa Georreferenciado ({len(df_filtrado)} incidencias)")
-        centro_lat = float(df_filtrado["lat"].iloc[-1]) if len(df_filtrado) > 0 else LAT_VALLENAR
-        centro_lon = float(df_filtrado["lon"].iloc[-1]) if len(df_filtrado) > 0 else LON_VALLENAR
-        
-        m = folium.Map(location=[centro_lat, centro_lon], zoom_start=14)
-        for _, row in df_filtrado.iterrows():
-            folium.Marker(
-                location=[float(row["lat"]), float(row["lon"])],
-                popup=f"<b>#{row['id']}</b>: {row['categoria']}",
-                tooltip=f"#{row['id']} - {row['categoria']}"
-            ).add_to(m)
-            
-        st_folium(m, width="100%", height=350, key="mapa_vallenar")
+            <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t text-center text-xs">
+                <div>
+                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 font-signature text-slate-600">Firma Inspector</div>
+                    <p class="font-bold" id="previewFirmaTecnico">Técnico Fluitek</p>
+                    <p class="text-slate-500">Especialista en Monitoreo de Condición</p>
+                </div>
+                <div>
+                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 font-signature text-slate-600">Aprobación Cliente</div>
+                    <p class="font-bold">Recepción Cliente / Supervisión</p>
+                    <p class="text-slate-500">Conforme / Notificado</p>
+                </div>
+            </div>
 
-    with col_grafico:
-        st.subheader("📊 Distribución por Sector")
-        if len(df_filtrado) > 0:
-            fig = px.pie(
-                df_filtrado, 
-                names='sector', 
-                hole=0.4, 
-                color_discrete_sequence=px.colors.qualitative.Set2
-            )
-            fig.update_layout(margin=dict(t=0, b=0, l=0, r=0))
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No hay datos para mostrar en la gráfica.")
+            <div class="mt-8 flex justify-end gap-3 no-print">
+                <button onclick="closePreview()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">
+                    Cerrar Vista Previa
+                </button>
+                <button onclick="window.print()" class="px-4 py-2 bg-fluitek-600 text-white rounded-lg text-xs font-semibold hover:bg-fluitek-700 flex items-center">
+                    <i class="fa-solid fa-print mr-2"></i> Imprimir / Exportar PDF
+                </button>
+            </div>
+        </div>
 
-    st.markdown("---")
-    st.subheader("📋 Galería de Reportes y Evidencia Fotográfica")
-    if len(df_filtrado) > 0:
-        for _, row in df_filtrado.iloc[::-1].iterrows():
-            with st.expander(f"📍 Folio #{row['id']} - {row['categoria']} ({row['sector']}) — Estado: [{row['estado']}]"):
-                col_text, col_img = st.columns([2, 1])
-                
-                with col_text:
-                    st.write(f"*Urgencia:* {row['prioridad']} | *Fecha:* {row['fecha']}")
-                    st.info(f"*Descripción del Vecino:* {row['comentario']}")
-                    st.success(f"*Respuesta Municipal:* {row.get('obs_municipal', 'En espera de revisión.')}")
-                
-                with col_img:
-                    foto_path = str(row.get("foto_path", "Sin foto"))
-                    if foto_path != "Sin foto" and os.path.exists(foto_path):
-                        st.image(foto_path, caption=f"Evidencia Folio #{row['id']}", use_container_width=True)
-                    else:
-                        st.caption("📷 Sin fotografía adjunta")
-    else:
-        st.info("No se encontraron reportes con los filtros seleccionados.")
+    </main>
 
-# ----------------------------------------------------
-# VISTA 3: PANEL DE ADMINISTRACIÓN (Gestión y Eliminación)
-# ----------------------------------------------------
-elif opcion_menu == "⚙️ Panel de Administración":
-    st.subheader("⚙️ Panel de Administración Municipal (Gestión e Informes)")
-    pass_input = st.text_input("Ingrese Clave de Administrador:", type="password")
-    
-    if pass_input == CLAVE_ADMIN:
-        st.success("🔑 Sesión de Administrador Activa")
-        df = st.session_state.incidencias
-        
-        if len(df) > 0:
-            rep_id = st.selectbox(
-                "Gestionar / Eliminar Incidencia:", 
-                options=df["id"].tolist(), 
-                format_func=lambda x: f"Folio #{x} - {df[df['id']==x]['categoria'].values[0]} ({df[df['id']==x]['sector'].values[0]})"
-            )
-            idx = df[df["id"] == rep_id].index[0]
-            
-            foto_admin = str(df.loc[idx, "foto_path"])
-            if foto_admin != "Sin foto" and os.path.exists(foto_admin):
-                st.image(foto_admin, caption="Foto adjunta por el vecino", width=300)
+    <!-- Modal Form: Dynamic New/Edit Report -->
+    <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-fluitek-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+                <h3 class="font-bold text-lg flex items-center">
+                    <i class="fa-solid fa-file-signature text-amber-400 mr-2"></i> 
+                    <span id="modalTitle">Nuevo Reporte de Campo - Fluitek</span>
+                </h3>
+                <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
-            # --- SECCIÓN 1: ACTUALIZAR ESTADO Y RESPUESTA ---
-            st.markdown("#### ✏️ Editar Estado y Respuesta")
-            col_edit1, col_edit2 = st.columns([1, 2])
-            with col_edit1:
-                nuevo_estado = st.selectbox("Cambiar Estado:", ["Pendiente", "En Proceso", "Resuelto"], index=["Pendiente", "En Proceso", "Resuelto"].index(df.loc[idx, "estado"]))
-            with col_edit2:
-                nueva_obs = st.text_input("Observación Interna / Respuesta al Vecino:", value=str(df.loc[idx, "obs_municipal"]))
-                
-            if st.button("💾 Actualizar y Guardar Cambios en Excel", use_container_width=True):
-                st.session_state.incidencias.loc[idx, "estado"] = nuevo_estado
-                st.session_state.incidencias.loc[idx, "obs_municipal"] = nueva_obs
-                guardar_datos_excel(st.session_state.incidencias)
-                
-                correo_destinatario = str(df.loc[idx, "contacto"])
-                cat_actual = str(df.loc[idx, "categoria"])
-                sec_actual = str(df.loc[idx, "sector"])
-                enviado, msj = enviar_correo_notificacion(correo_destinatario, rep_id, nuevo_estado, cat_actual, sec_actual)
-                
-                st.success(f"✅ Reporte #{rep_id} actualizado con éxito.")
-                st.rerun()
+            <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
+                <input type="hidden" id="reportId">
 
-            st.markdown("---")
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
+                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Faena / Planta *</label>
+                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Equipo / Tag ID *</label>
+                        <input type="text" id="inputTag" required placeholder="Ej: RED-9000-A" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                </div>
 
-            # --- SECCIÓN 2: ELIMINAR REPORTE ---
-            st.markdown("#### 🗑️ Eliminar Reporte")
-            confirmar_borrado = st.checkbox(f"⚠️ Confirmar que deseas eliminar permanentemente el reporte Folio #{rep_id}")
-            
-            if st.button("❌ Eliminar Reporte", use_container_width=True, type="primary"):
-                if confirmar_borrado:
-                    if foto_admin != "Sin foto" and os.path.exists(foto_admin):
-                        try:
-                            os.remove(foto_admin)
-                        except Exception:
-                            pass
-                    
-                    st.session_state.incidencias = st.session_state.incidencias[st.session_state.incidencias["id"] != rep_id].reset_index(drop=True)
-                    guardar_datos_excel(st.session_state.incidencias)
-                    
-                    st.success(f"🗑️ El reporte Folio #{rep_id} ha sido eliminado permanentemente.")
-                    st.rerun()
-                else:
-                    st.warning("Por favor marca la casilla de confirmación antes de presionar Eliminar.")
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Servicio</label>
+                        <select id="inputTipo" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                            <option value="Monitoreo de Condición">Monitoreo de Condición</option>
+                            <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
+                            <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
+                            <option value="Inspección General">Inspección General</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nivel de Criticidad</label>
+                        <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                            <option value="NORMAL" class="text-emerald-600 font-bold">🟢 Normal</option>
+                            <option value="MEDIA" class="text-amber-600 font-bold">🟡 Advertencia</option>
+                            <option value="ALTA" class="text-red-600 font-bold">🔴 Critica / Alarma</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Inspector responsable *</label>
+                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                </div>
 
-        else:
-            st.info("No hay reportes ingresados actualmente para gestionar.")
+                <!-- Parameters Grid -->
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-500">Temp. (°C)</label>
+                            <input type="number" id="inputTemp" placeholder="65" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500">Presión (PSI)</label>
+                            <input type="number" id="inputPresion" placeholder="1800" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500">Código ISO 4406</label>
+                            <input type="text" id="inputISO" placeholder="18/16/13" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                    </div>
+                </div>
 
-        st.markdown("---")
-        st.subheader("📊 Descargas y Reportes Oficiales")
-        col_excel, col_pdf = st.columns(2)
-        
-        with col_excel:
-            if os.path.exists(EXCEL_FILE):
-                with open(EXCEL_FILE, "rb") as f:
-                    st.download_button(
-                        label="📊 Descargar Base de Datos (Excel)",
-                        data=f,
-                        file_name=f"Reportes_Vallenar_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-700">Coordenadas / Ubicación GPS</label>
+                        <button type="button" onclick="getGPSLocation()" class="text-xs text-fluitek-600 hover:underline flex items-center">
+                            <i class="fa-solid fa-location-crosshairs mr-1"></i> Capturar GPS Actual
+                        </button>
+                    </div>
+                    <input type="text" id="inputGPS" placeholder="-27.5738, -70.7582" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                </div>
 
-        with col_pdf:
-            pdf_bytes = generar_pdf_gestion(df)
-            st.download_button(
-                label="📥 Descargar Informe de Gestión (PDF)",
-                data=pdf_bytes,
-                file_name=f"Informe_Vallenar_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-    elif pass_input != "":
-        st.error("❌ Clave de acceso incorrecta")
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
+                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
+                </div>
 
-# ----------------------------------------------------
-# Pie de Página
-# ----------------------------------------------------
-st.markdown("""
-    <div class="footer-card">
-        <h3>🚀 ¡Construyendo juntos el Vallenar que avanza!</h3>
-        <p>Tu participación ciudadana es el motor clave para transformar y cuidar nuestros barrios.</p>
-        <div class="footer-badges">
-            <span class="footer-badge-item">🌐 Gestión Territorial</span>
-            <span class="footer-badge-item">🤝 Ciencia Ciudadana</span>
-            <span class="footer-badge-item">🏛️ Ilustre Municipalidad de Vallenar</span>
-            <span class="footer-badge-item">📍 Región de Atacama, Chile</span>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
+                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-fluitek-600 text-white rounded-lg text-sm font-semibold hover:bg-fluitek-700 shadow flex items-center">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Reporte
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-""", unsafe_allow_html=True)
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let reports = [];
+
+        // Initial sample data tailored for Fluitek
+        const sampleReports = [
+            {
+                id: "FLT-2026-001",
+                fecha: "2026-09-05 14:30",
+                cliente: "Minera Pelambres",
+                faena: "Planta Concentradora",
+                tag: "BOMBA-HYD-04",
+                tipo: "Monitoreo de Condición",
+                criticidad: "ALTA",
+                inspector: "Carlos Mendoza",
+                temp: 78,
+                presion: 2100,
+                iso: "21/19/16",
+                gps: "-31.8722, -70.5211",
+                diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
+                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
+            },
+            {
+                id: "FLT-2026-002",
+                fecha: "2026-09-06 09:15",
+                cliente: "Atacama Minerals",
+                faena: "Mina Subterránea",
+                tag: "RED-PARAMAX-9000",
+                tipo: "Análisis de Aceite / Fluidos",
+                criticidad: "MEDIA",
+                inspector: "Andrea Rojas",
+                temp: 62,
+                presion: 1450,
+                iso: "18/16/13",
+                gps: "-27.3667, -70.3333",
+                diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
+                recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
+            },
+            {
+                id: "FLT-2026-003",
+                fecha: "2026-09-06 11:00",
+                cliente: "Candelaria",
+                faena: "Área Chancado",
+                tag: "CH-01-LUB-02",
+                tipo: "Mantenimiento Hidráulico",
+                criticidad: "NORMAL",
+                inspector: "Carlos Mendoza",
+                temp: 45,
+                presion: 1200,
+                iso: "15/13/10",
+                gps: "-27.5738, -70.7582",
+                diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
+                recomendaciones: "Continuar con plan estándar de lubricación preventiva."
+            }
+        ];
+
+        // Initialize application
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('fluitek_reports');
+            if (saved) {
+                try {
+                    reports = JSON.parse(saved);
+                } catch(e) {
+                    reports = sampleReports;
+                }
+            } else {
+                reports = sampleReports;
+                saveToStorage();
+            }
+            renderReports();
+        });
+
+        function saveToStorage() {
+            localStorage.setItem('fluitek_reports', JSON.stringify(reports));
+        }
+
+        function loadSampleData() {
+            reports = [...sampleReports];
+            saveToStorage();
+            renderReports();
+        }
+
+        function renderReports() {
+            const tbody = document.getElementById('reportsTableBody');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const severity = document.getElementById('filterSeverity').value;
+            const type = document.getElementById('filterType').value;
+
+            tbody.innerHTML = '';
+
+            let filtered = reports.filter(r => {
+                const matchesSearch = r.cliente.toLowerCase().includes(search) || 
+                                     r.tag.toLowerCase().includes(search) || 
+                                     r.inspector.toLowerCase().includes(search) ||
+                                     r.id.toLowerCase().includes(search);
+                const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
+                const matchesType = (type === 'ALL') || (r.tipo === type);
+                return matchesSearch && matchesSeverity && matchesType;
+            });
+
+            // Update KPIs
+            document.getElementById('kpi-total').innerText = reports.length;
+            document.getElementById('kpi-critical').innerText = reports.filter(r => r.criticidad === 'ALTA').length;
+            document.getElementById('kpi-warning').innerText = reports.filter(r => r.criticidad === 'MEDIA').length;
+            document.getElementById('kpi-normal').innerText = reports.filter(r => r.criticidad === 'NORMAL').length;
+
+            if (filtered.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+            } else {
+                document.getElementById('emptyState').classList.add('hidden');
+                
+                filtered.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition border-b";
+
+                    let badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                    let badgeIcon = "fa-circle-check";
+                    if (r.criticidad === 'ALTA') {
+                        badgeClass = "bg-red-100 text-red-800 border-red-300";
+                        badgeIcon = "fa-triangle-exclamation";
+                    } else if (r.criticidad === 'MEDIA') {
+                        badgeClass = "bg-amber-100 text-amber-800 border-amber-300";
+                        badgeIcon = "fa-circle-exclamation";
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4">
+                            <span class="font-bold text-fluitek-800">${r.id}</span>
+                            <div class="text-xs text-slate-400">${r.fecha}</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="font-semibold text-slate-800">${r.cliente}</div>
+                            <div class="text-xs text-slate-500">${r.faena}</div>
+                        </td>
+                        <td class="p-4">
+                            <span class="font-mono bg-slate-100 px-2 py-1 rounded text-xs border font-semibold text-slate-700">${r.tag}</span>
+                        </td>
+                        <td class="p-4 text-xs font-medium text-slate-600">${r.tipo}</td>
+                        <td class="p-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeClass}">
+                                <i class="fa-solid ${badgeIcon} mr-1.5 text-[10px]"></i> ${r.criticidad}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
+                        <td class="p-4 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-fluitek-600 hover:bg-fluitek-50 rounded-lg transition">
+                                    <i class="fa-solid fa-file-pdf text-base"></i>
+                                </button>
+                                <button onclick="editReport('${r.id}')" title="Editar" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="deleteReport('${r.id}')" title="Eliminar" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function openNewReportModal() {
+            document.getElementById('reportForm').reset();
+            document.getElementById('reportId').value = '';
+            document.getElementById('modalTitle').innerText = 'Nuevo Reporte de Campo - Fluitek';
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+        }
+
+        function getGPSLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lng = position.coords.longitude.toFixed(4);
+                    document.getElementById('inputGPS').value = `${lat}, ${lng}`;
+                }, () => {
+                    alert('No se pudo obtener la geolocalización. Se usará una por defecto.');
+                    document.getElementById('inputGPS').value = "-27.5738, -70.7582";
+                });
+            } else {
+                alert('Geolocalización no soportada por su navegador.');
+            }
+        }
+
+        function saveReport(e) {
+            e.preventDefault();
+            const idInput = document.getElementById('reportId').value;
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
+
+            if (idInput) {
+                // Update existing
+                const index = reports.findIndex(r => r.id === idInput);
+                if (index !== -1) {
+                    reports[index] = {
+                        ...reports[index],
+                        cliente: document.getElementById('inputCliente').value,
+                        faena: document.getElementById('inputFaena').value,
+                        tag: document.getElementById('inputTag').value,
+                        tipo: document.getElementById('inputTipo').value,
+                        criticidad: document.getElementById('inputCriticidad').value,
+                        inspector: document.getElementById('inputInspector').value,
+                        temp: document.getElementById('inputTemp').value || '-',
+                        presion: document.getElementById('inputPresion').value || '-',
+                        iso: document.getElementById('inputISO').value || '-',
+                        gps: document.getElementById('inputGPS').value || 'N/A',
+                        diagnostico: document.getElementById('inputDiagnostico').value,
+                        recomendaciones: document.getElementById('inputRecomendaciones').value
+                    };
+                }
+            } else {
+                // Create new with incremental Folio
+                const folioNum = String(reports.length + 1).padStart(3, '0');
+                const newReport = {
+                    id: `FLT-2026-${folioNum}`,
+                    fecha: dateStr,
+                    cliente: document.getElementById('inputCliente').value,
+                    faena: document.getElementById('inputFaena').value,
+                    tag: document.getElementById('inputTag').value,
+                    tipo: document.getElementById('inputTipo').value,
+                    criticidad: document.getElementById('inputCriticidad').value,
+                    inspector: document.getElementById('inputInspector').value,
+                    temp: document.getElementById('inputTemp').value || '-',
+                    presion: document.getElementById('inputPresion').value || '-',
+                    iso: document.getElementById('inputISO').value || '-',
+                    gps: document.getElementById('inputGPS').value || 'N/A',
+                    diagnostico: document.getElementById('inputDiagnostico').value,
+                    recomendaciones: document.getElementById('inputRecomendaciones').value
+                };
+                reports.unshift(newReport);
+            }
+
+            saveToStorage();
+            renderReports();
+            closeReportModal();
+        }
+
+        function editReport(id) {
+            const item = reports.find(r => r.id === id);
+            if (!item) return;
+
+            document.getElementById('reportId').value = item.id;
+            document.getElementById('inputCliente').value = item.cliente;
+            document.getElementById('inputFaena').value = item.faena;
+            document.getElementById('inputTag').value = item.tag;
+            document.getElementById('inputTipo').value = item.tipo;
+            document.getElementById('inputCriticidad').value = item.criticidad;
+            document.getElementById('inputInspector').value = item.inspector;
+            document.getElementById('inputTemp').value = item.temp || '';
+            document.getElementById('inputPresion').value = item.presion || '';
+            document.getElementById('inputISO').value = item.iso || '';
+            document.getElementById('inputGPS').value = item.gps || '';
+            document.getElementById('inputDiagnostico').value = item.diagnostico;
+            document.getElementById('inputRecomendaciones').value = item.recomendaciones;
+
+            document.getElementById('modalTitle').innerText = `Editar Reporte ${item.id}`;
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function deleteReport(id) {
+            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
+                reports = reports.filter(r => r.id !== id);
+                saveToStorage();
+                renderReports();
+            }
+        }
+
+        function previewReport(id) {
+            const item = reports.find(r => r.id === id);
+            if (!item) return;
+
+            document.getElementById('previewFolio').innerText = `FOLIO: ${item.id}`;
+            document.getElementById('previewFecha').innerText = `Fecha: ${item.fecha}`;
+            document.getElementById('previewCliente').innerText = item.cliente;
+            document.getElementById('previewFaena').innerText = item.faena;
+            document.getElementById('previewGPS').innerText = item.gps;
+            document.getElementById('previewTag').innerText = item.tag;
+            document.getElementById('previewTipo').innerText = item.tipo;
+            document.getElementById('previewInspector').innerText = item.inspector;
+            document.getElementById('previewFirmaTecnico').innerText = item.inspector;
+
+            document.getElementById('previewTemp').innerText = item.temp;
+            document.getElementById('previewPresion').innerText = item.presion;
+            document.getElementById('previewISO').innerText = item.iso;
+
+            document.getElementById('previewDiagnostico').innerText = item.diagnostico || 'Sin observaciones.';
+            document.getElementById('previewRecomendaciones').innerText = item.recomendaciones || 'Sin recomendaciones registradas.';
+
+            const badge = document.getElementById('previewBadgeCriticidad');
+            if (item.criticidad === 'ALTA') {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-600 text-white";
+                badge.innerText = "CRITICIDAD ALTA / ALARMA TÉCNICA";
+            } else if (item.criticidad === 'MEDIA') {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-500 text-white";
+                badge.innerText = "CRITICIDAD MEDIA / ADVERTENCIA";
+            } else {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-600 text-white";
+                badge.innerText = "CONDICIÓN OPERATIVA NORMAL";
+            }
+
+            const container = document.getElementById('printPreviewContainer');
+            container.classList.remove('hidden');
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closePreview() {
+            document.getElementById('printPreviewContainer').classList.add('hidden');
+        }
+
+        function exportDataCSV() {
+            if (reports.length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\n";
+
+            reports.forEach(r => {
+                const row = [
+                    `"${r.id}"`,
+                    `"${r.fecha}"`,
+                    `"${r.cliente}"`,
+                    `"${r.faena}"`,
+                    `"${r.tag}"`,
+                    `"${r.tipo}"`,
+                    `"${r.criticidad}"`,
+                    `"${r.inspector}"`,
+                    `"${r.temp}"`,
+                    `"${r.presion}"`,
+                    `"${r.iso}"`,
+                    `"${r.gps}"`,
+                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
+                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
