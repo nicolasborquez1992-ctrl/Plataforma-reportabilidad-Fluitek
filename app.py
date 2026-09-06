@@ -1,4 +1,4 @@
-import streamlit as st
+[18:08, 6/9/2026] Nicolás Bórquez: import streamlit as st
 import streamlit.components.v1 as components
 
 # Configuración de página en Streamlit
@@ -24,28 +24,155 @@ fluitek_full_app = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluitek - Field & Technical Reports</title>
-    <!-- Tailwind CSS -->
+    <title>Fluitek - Field & Technical…
+[18:12, 6/9/2026] Nicolás Bórquez: import streamlit as st
+import streamlit.components.v1 as components
+import json
+import base64
+from datetime import datetime
+
+# 1. Configuración de la página
+st.set_page_config(
+    page_title="Fluitek - Reportes Técnicos",
+    page_icon="⚙️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Estilos CSS para ocultar bordes por defecto de Streamlit y dar apariencia limpia
+st.markdown("""
+    <style>
+        .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+        header { visibility: hidden; }
+        footer { visibility: hidden; }
+        div[data-testid="stSidebar"] { background-color: #0f172a; color: white; }
+    </style>
+""", unsafe_allow_html=True)
+
+# 2. Inicializar la lista de reportes en la sesión si no existe
+if "reports_list" not in st.session_state:
+    st.session_state.reports_list = [
+        {
+            "id": "FLT-2026-001",
+            "ot": "OT-88412",
+            "fecha": "2026-09-06 14:30",
+            "cliente": "Minera Pelambres",
+            "faena": "Planta Concentradora",
+            "tag": "BOMBA-HYD-04",
+            "tipo": "Monitoreo de Condición",
+            "criticidad": "ALTA",
+            "inspector": "Carlos Mendoza",
+            "diagnostico": "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
+            "recomendaciones": "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante.",
+            "foto": None
+        },
+        {
+            "id": "FLT-2026-002",
+            "ot": "OT-88413",
+            "fecha": "2026-09-06 16:15",
+            "cliente": "Atacama Minerals",
+            "faena": "Mina Subterránea",
+            "tag": "RED-PARAMAX-9000",
+            "tipo": "Análisis de Aceite / Fluidos",
+            "criticidad": "MEDIA",
+            "inspector": "Andrea Rojas",
+            "diagnostico": "Viscosidad del fluido ligeramente fuera de rango operacional por degradación térmica moderada.",
+            "recomendaciones": "Programar cambio de lubricante en próximo turno de mantenimiento preventivo.",
+            "foto": None
+        }
+    ]
+
+# 3. FORMULARIO NATIVO EN LA BARRA LATERAL (SIDEBAR)
+with st.sidebar:
+    st.markdown("### 🛠️ *Fluitek Control Panel*")
+    st.markdown("---")
+    st.subheader("➕ Nuevo Reporte / OT")
+    
+    with st.form("form_nuevo_reporte_fluitek", clear_on_submit=True):
+        input_ot = st.text_input("Orden de Trabajo (OT) *", placeholder="Ej: OT-10492")
+        input_cliente = st.text_input("Cliente *", placeholder="Ej: Minera Candelaria")
+        input_faena = st.text_input("Faena / Planta *", placeholder="Ej: Concentradora")
+        input_tag = st.text_input("Equipo / Tag ID *", placeholder="Ej: RED-9000-A")
+        
+        input_tipo = st.selectbox("Tipo de Servicio", [
+            "Monitoreo de Condición",
+            "Análisis de Aceite / Fluidos",
+            "Mantenimiento Hidráulico",
+            "Inspección de Reductores",
+            "Inspección General"
+        ])
+        
+        input_criticidad = st.selectbox("Nivel de Criticidad", [
+            "NORMAL",
+            "MEDIA",
+            "ALTA"
+        ])
+        
+        input_inspector = st.text_input("Inspector Responsable *", placeholder="Nombre del Técnico")
+        
+        input_diagnostico = st.text_area("Diagnóstico Técnico y Hallazgos *", placeholder="Describa el estado del equipo...")
+        input_recomendaciones = st.text_area("Recomendaciones / Acciones", placeholder="Acciones sugeridas...")
+        
+        uploaded_file = st.file_uploader("Adjuntar Foto (Opcional)", type=["png", "jpg", "jpeg"])
+        
+        btn_guardar = st.form_submit_button("💾 GUARDAR REPORTE", use_container_width=True, type="primary")
+        
+        if btn_guardar:
+            if not input_ot or not input_cliente or not input_tag or not input_inspector or not input_diagnostico:
+                st.error("⚠️ Por favor completa los campos obligatorios (*).")
+            else:
+                # Procesar imagen a base64 si existe
+                img_data_uri = None
+                if uploaded_file is not None:
+                    bytes_data = uploaded_file.getvalue()
+                    base64_img = base64.b64encode(bytes_data).decode('utf-8')
+                    img_data_uri = f"data:{uploaded_file.type};base64,{base64_img}"
+                
+                nuevo_folio = f"FLT-2026-{len(st.session_state.reports_list) + 1:03d}"
+                fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
+                
+                nuevo_registro = {
+                    "id": nuevo_folio,
+                    "ot": input_ot,
+                    "fecha": fecha_actual,
+                    "cliente": input_cliente,
+                    "faena": input_faena,
+                    "tag": input_tag,
+                    "tipo": input_tipo,
+                    "criticidad": input_criticidad,
+                    "inspector": input_inspector,
+                    "diagnostico": input_diagnostico,
+                    "recomendaciones": input_recomendaciones if input_recomendaciones else "Sin recomendaciones adicionales.",
+                    "foto": img_data_uri
+                }
+                
+                st.session_state.reports_list.insert(0, nuevo_registro)
+                st.success(f"✅ ¡Reporte {nuevo_folio} guardado con éxito!")
+                st.rerun()
+
+# 4. PREPARAR DATOS JSON PARA EL DASHBOARD
+json_reports_data = json.dumps(st.session_state.reports_list, ensure_ascii=False)
+
+# 5. CÓDIGO HTML DE LA PLATAFORMA (FORMATO OSCURO OFICIAL FLUITEK)
+fluitek_dashboard_html = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white; color: black; }
-        }
-        .print-only { display: none; }
-        
-        /* Modal Backdrop Fix */
-        .modal-active {
-            display: flex !important;
-        }
+        @media print {{
+            .no-print {{ display: none !important; }}
+            .print-only {{ display: block !important; }}
+            body {{ background: white; color: black; }}
+        }}
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-3">
+<body class="bg-slate-900 text-slate-100 font-sans p-2">
 
-    <!-- CABECERA MADRE FLUITEK -->
+    <!-- CABECERA PRINCIPAL -->
     <header class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-4 shadow-xl flex justify-between items-center no-print">
         <div class="flex items-center space-x-3">
             <div class="bg-black text-white font-black text-xl px-4 py-1.5 rounded tracking-wider border border-slate-700">
@@ -56,12 +183,7 @@ fluitek_full_app = """
                 <p class="text-xs text-slate-400">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
             </div>
         </div>
-        
-        <div class="flex items-center space-x-3">
-            <!-- BOTÓN EN AMARILLO PEDIDO POR EL USUARIO -->
-            <button onclick="openModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-4 py-2 rounded-lg text-sm transition flex items-center shadow-lg border border-amber-400">
-                <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte / OT
-            </button>
+        <div>
             <button onclick="exportCSV()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-lg text-sm transition flex items-center shadow">
                 <i class="fa-solid fa-file-excel mr-2 text-emerald-400"></i> Exportar CSV
             </button>
@@ -103,26 +225,23 @@ fluitek_full_app = """
         </div>
     </div>
 
-    <!-- CONTROLES BÚSQUEDA Y FILTRO -->
+    <!-- FILTRO Y BÚSQUEDA -->
     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4 flex flex-col md:flex-row gap-3 justify-between items-center no-print">
         <div class="relative w-full md:w-96">
             <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500"></i>
             <input type="text" id="searchInput" oninput="renderTable()" placeholder="Buscar por OT, Cliente, Tag, Inspector..." class="w-full pl-9 pr-4 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-amber-500">
         </div>
-        <div class="flex items-center space-x-3 w-full md:w-auto">
+        <div>
             <select id="filterCriticidad" onchange="renderTable()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500">
                 <option value="ALL">Todas las Criticidades</option>
                 <option value="ALTA">Alta / Alarma</option>
                 <option value="MEDIA">Advertencia</option>
                 <option value="NORMAL">Normal</option>
             </select>
-            <button onclick="cargarEjemplos()" class="text-xs text-amber-400 hover:text-amber-300 underline font-medium whitespace-nowrap">
-                🔄 Cargar Datos de Ejemplo
-            </button>
         </div>
     </div>
 
-    <!-- TABLA DE REPORTES -->
+    <!-- TABLA DE RESULTADOS -->
     <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-lg no-print">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -139,89 +258,13 @@ fluitek_full_app = """
                     </tr>
                 </thead>
                 <tbody id="tableBody" class="divide-y divide-slate-800/60 text-sm">
-                    <!-- Registros dinámicos -->
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- MODAL POPUP PARA NUEVO REPORTE -->
-    <div id="reportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
-                <h3 class="text-lg font-bold text-amber-400 flex items-center">
-                    <i class="fa-solid fa-file-pen mr-2"></i> Nuevo Reporte / Orden de Trabajo
-                </h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
-            </div>
-
-            <form id="reportForm" onsubmit="saveReport(event)" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Orden de Trabajo (OT) *</label>
-                        <input type="text" id="inputOT" required placeholder="Ej: OT-88412" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Tipo de Servicio</label>
-                        <select id="inputTipo" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                            <option value="Monitoreo de Condición">Monitoreo de Condición</option>
-                            <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
-                            <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
-                            <option value="Inspección de Reductores">Inspección de Reductores</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Cliente *</label>
-                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Los Pelambres" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Nivel de Criticidad *</label>
-                        <select id="inputCriticidad" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 font-bold focus:outline-none focus:border-amber-500">
-                            <option value="NORMAL" class="text-emerald-500">NORMAL</option>
-                            <option value="MEDIA" class="text-amber-500">MEDIA / ADVERTENCIA</option>
-                            <option value="ALTA" class="text-red-500">ALTA / ALARMA</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Faena / Planta *</label>
-                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Inspector Responsable *</label>
-                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Equipo / Tag ID *</label>
-                        <input type="text" id="inputTag" required placeholder="Ej: RED-PARAMAX-9000" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Adjuntar Foto (Opcional)</label>
-                        <input type="file" id="inputFoto" accept="image/*" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Diagnóstico Técnico y Hallazgos *</label>
-                    <textarea id="inputDiagnostico" required rows="3" placeholder="Describa la condición operacional o falla detectada..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Recomendaciones / Acciones</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Acciones correctivas o preventivas..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500"></textarea>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-lg text-sm">Cancelar</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-sm flex items-center shadow-lg">
-                        <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Reporte
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- VISTA PREVIA FORMATO INFORME IMPRIMIBLE -->
-    <div id="printPreview" class="hidden bg-white text-slate-900 p-8 rounded-xl shadow-2xl border border-slate-300 max-w-4xl mx-auto my-6 print-card">
+    <!-- VISTA PREVIA DEL INFORME IMPRIMIBLE -->
+    <div id="printPreview" class="hidden bg-white text-slate-900 p-8 rounded-xl shadow-2xl border border-slate-300 max-w-4xl mx-auto my-6">
         <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
             <div>
                 <div class="bg-black text-white font-black text-2xl px-4 py-1.5 rounded tracking-wider inline-block">
@@ -230,7 +273,7 @@ fluitek_full_app = """
                 <p class="text-xs text-slate-600 mt-2">Servicios de Ingeniería, Fluidos & Mantenimiento Predictivo</p>
             </div>
             <div class="text-right">
-                <span id="pvFolio" class="text-lg font-bold text-slate-900">FOLIO: FLT-2026-001</span>
+                <span id="pvFolio" class="text-lg font-bold text-slate-900">FOLIO: -</span>
                 <p id="pvFecha" class="text-xs text-slate-500">Fecha: -</p>
             </div>
         </div>
@@ -269,6 +312,11 @@ fluitek_full_app = """
             </p>
         </div>
 
+        <div id="pvFotoContainer" class="mb-6 hidden">
+            <h4 class="font-bold text-sm text-slate-900 mb-2 border-b border-slate-300 pb-1">EVIDENCIA FOTOGRÁFICA</h4>
+            <img id="pvFoto" class="max-h-64 rounded border border-slate-300 mx-auto object-contain">
+        </div>
+
         <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t border-slate-300 text-center text-xs">
             <div>
                 <div class="border-b border-slate-400 mb-2 h-10 flex items-end justify-center pb-1 text-slate-500">Firma Técnico</div>
@@ -289,70 +337,20 @@ fluitek_full_app = """
     </div>
 
     <script>
-        let reportsData = [];
+        const reportsData = {json_reports_data};
 
-        function openModal() {
-            document.getElementById('reportModal').classList.add('modal-active');
-        }
-
-        function closeModal() {
-            document.getElementById('reportModal').classList.remove('modal-active');
-            document.getElementById('reportForm').reset();
-        }
-
-        function saveReport(event) {
-            event.preventDefault();
-
-            const ot = document.getElementById('inputOT').value.trim();
-            const cliente = document.getElementById('inputCliente').value.trim();
-            const faena = document.getElementById('inputFaena').value.trim();
-            const tag = document.getElementById('inputTag').value.trim();
-            const tipo = document.getElementById('inputTipo').value;
-            const criticidad = document.getElementById('inputCriticidad').value;
-            const inspector = document.getElementById('inputInspector').value.trim();
-            const diagnostico = document.getElementById('inputDiagnostico').value.trim();
-            const recomendaciones = document.getElementById('inputRecomendaciones').value.trim();
-            const fotoInput = document.getElementById('inputFoto');
-
-            const folioNum = String(reportsData.length + 1).padStart(3, '0');
-            const newFolio = FLT-2026-${folioNum};
-            
-            const now = new Date();
-            const fechaStr = ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')};
-
-            let imgUrl = null;
-            if (fotoInput.files && fotoInput.files[0]) {
-                imgUrl = URL.createObjectURL(fotoInput.files[0]);
-            }
-
-            const newRecord = {
-                id: newFolio,
-                ot: ot,
-                fecha: fechaStr,
-                cliente: cliente,
-                faena: faena,
-                tag: tag,
-                tipo: tipo,
-                criticidad: criticidad,
-                inspector: inspector,
-                diagnostico: diagnostico,
-                recomendaciones: recomendaciones || 'Sin recomendaciones adicionales.',
-                foto: imgUrl
-            };
-
-            reportsData.unshift(newRecord);
-            closeModal();
+        window.addEventListener('DOMContentLoaded', () => {{
             renderTable();
-        }
+        }});
 
-        function renderTable() {
+        function renderTable() {{
             const tbody = document.getElementById('tableBody');
             const search = document.getElementById('searchInput').value.toLowerCase();
             const filterCrit = document.getElementById('filterCriticidad').value;
 
             tbody.innerHTML = '';
 
-            let filtered = reportsData.filter(r => {
+            let filtered = reportsData.filter(r => {{
                 const matchSearch = r.cliente.toLowerCase().includes(search) ||
                                     r.tag.toLowerCase().includes(search) ||
                                     r.inspector.toLowerCase().includes(search) ||
@@ -360,83 +358,80 @@ fluitek_full_app = """
                                     (r.ot && r.ot.toLowerCase().includes(search));
                 const matchCrit = (filterCrit === 'ALL') || (r.criticidad === filterCrit);
                 return matchSearch && matchCrit;
-            });
+            }});
 
-            // Actualizar KPIs
             document.getElementById('kpi-total').innerText = reportsData.length;
             document.getElementById('kpi-alta').innerText = reportsData.filter(r => r.criticidad === 'ALTA').length;
             document.getElementById('kpi-media').innerText = reportsData.filter(r => r.criticidad === 'MEDIA').length;
             document.getElementById('kpi-normal').innerText = reportsData.filter(r => r.criticidad === 'NORMAL').length;
 
-            if (filtered.length === 0) {
+            if (filtered.length === 0) {{
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="8" class="p-8 text-center text-slate-500 font-medium">
-                            <i class="fa-regular fa-folder-open text-2xl mb-2 block"></i>
-                            No hay reportes ingresados. Haz clic en <span class="text-amber-400 font-bold">"Nuevo Reporte / OT"</span> para registrar uno.
+                            No hay reportes que coincidan con la búsqueda. Ingresa datos desde el menú lateral.
                         </td>
                     </tr>
                 `;
                 return;
-            }
+            }}
 
-            filtered.forEach(r => {
+            filtered.forEach(r => {{
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-900/80 transition border-b border-slate-800/60";
 
-                // ESTILOS DE COLORES PARA CRITICIDAD
                 let badgeHTML = '';
-                if (r.criticidad === 'ALTA') {
+                if (r.criticidad === 'ALTA') {{
                     badgeHTML = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/40">
                                     <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> ALTA / ALARMA
                                  </span>`;
-                } else if (r.criticidad === 'MEDIA') {
+                } else if (r.criticidad === 'MEDIA') {{
                     badgeHTML = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">
                                     <i class="fa-solid fa-circle-exclamation mr-1.5"></i> ADVERTENCIA
                                  </span>`;
-                } else {
+                } else {{
                     badgeHTML = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                                     <i class="fa-solid fa-circle-check mr-1.5"></i> NORMAL
                                  </span>`;
-                }
+                }}
 
                 const photoHTML = r.foto 
-                    ? <img src="${r.foto}" class="w-9 h-9 object-cover rounded-lg border border-slate-700">
+                    ? <img src="${{r.foto}}" class="w-9 h-9 object-cover rounded-lg border border-slate-700">
                     : <div class="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 text-xs"><i class="fa-solid fa-image"></i></div>;
 
                 tr.innerHTML = `
-                    <td class="p-3">${photoHTML}</td>
+                    <td class="p-3">${{photoHTML}}</td>
                     <td class="p-3">
-                        <div class="font-bold text-slate-100">${r.id}</div>
-                        <div class="text-xs font-semibold text-amber-400"><i class="fa-solid fa-hashtag mr-0.5"></i>${r.ot}</div>
-                        <div class="text-[11px] text-slate-500">${r.fecha}</div>
+                        <div class="font-bold text-slate-100">${{r.id}}</div>
+                        <div class="text-xs font-semibold text-amber-400"><i class="fa-solid fa-hashtag mr-0.5"></i>${{r.ot}}</div>
+                        <div class="text-[11px] text-slate-500">${{r.fecha}}</div>
                     </td>
                     <td class="p-3">
-                        <div class="font-semibold text-slate-200">${r.cliente}</div>
-                        <div class="text-xs text-slate-400">${r.faena}</div>
+                        <div class="font-semibold text-slate-200">${{r.cliente}}</div>
+                        <div class="text-xs text-slate-400">${{r.faena}}</div>
                     </td>
                     <td class="p-3">
-                        <span class="font-mono bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-xs font-semibold text-slate-300">${r.tag}</span>
+                        <span class="font-mono bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-xs font-semibold text-slate-300">${{r.tag}}</span>
                     </td>
-                    <td class="p-3 text-xs text-slate-300 font-medium">${r.tipo}</td>
-                    <td class="p-3">${badgeHTML}</td>
-                    <td class="p-3 text-xs text-slate-300">${r.inspector}</td>
+                    <td class="p-3 text-xs text-slate-300 font-medium">${{r.tipo}}</td>
+                    <td class="p-3">${{badgeHTML}}</td>
+                    <td class="p-3 text-xs text-slate-300">${{r.inspector}}</td>
                     <td class="p-3 text-center">
-                        <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition">
+                        <button onclick="previewReport('${{r.id}}')" title="Ver Informe PDF" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition">
                             <i class="fa-solid fa-file-pdf text-red-400 text-base"></i>
                         </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
-            });
-        }
+            }});
+        }}
 
-        function previewReport(id) {
+        function previewReport(id) {{
             const r = reportsData.find(item => item.id === id);
             if (!r) return;
 
-            document.getElementById('pvFolio').innerText = FOLIO: ${r.id};
-            document.getElementById('pvFecha').innerText = Fecha: ${r.fecha};
+            document.getElementById('pvFolio').innerText = FOLIO: ${{r.id}};
+            document.getElementById('pvFecha').innerText = Fecha: ${{r.fecha}};
             document.getElementById('pvOT').innerText = r.ot;
             document.getElementById('pvCliente').innerText = r.cliente;
             document.getElementById('pvFaena').innerText = r.faena;
@@ -444,71 +439,56 @@ fluitek_full_app = """
             document.getElementById('pvTipo').innerText = r.tipo;
             document.getElementById('pvInspector').innerText = r.inspector;
             document.getElementById('pvFirmaInspector').innerText = r.inspector;
-
             document.getElementById('pvDiagnostico').innerText = r.diagnostico;
             document.getElementById('pvRecomendaciones').innerText = r.recomendaciones;
 
             const badge = document.getElementById('pvBadgeCriticidad');
-            if (r.criticidad === 'ALTA') {
+            if (r.criticidad === 'ALTA') {{
                 badge.className = "inline-block px-3 py-1 rounded font-bold text-xs bg-red-100 text-red-800 border border-red-300";
                 badge.innerText = "CRITICIDAD ALTA / ALARMA";
-            } else if (r.criticidad === 'MEDIA') {
+            }} else if (r.criticidad === 'MEDIA') {{
                 badge.className = "inline-block px-3 py-1 rounded font-bold text-xs bg-amber-100 text-amber-800 border border-amber-300";
                 badge.innerText = "ADVERTENCIA / CRITICIDAD MEDIA";
-            } else {
+            }} else {{
                 badge.className = "inline-block px-3 py-1 rounded font-bold text-xs bg-emerald-100 text-emerald-800 border border-emerald-300";
                 badge.innerText = "CONDICIÓN NORMAL";
-            }
+            }}
+
+            const imgCont = document.getElementById('pvFotoContainer');
+            if (r.foto) {{
+                document.getElementById('pvFoto').src = r.foto;
+                imgCont.classList.remove('hidden');
+            }} else {{
+                imgCont.classList.add('hidden');
+            }}
 
             const pv = document.getElementById('printPreview');
             pv.classList.remove('hidden');
-            pv.scrollIntoView({ behavior: 'smooth' });
-        }
+            pv.scrollIntoView({{ behavior: 'smooth' }});
+        }}
 
-        function closePreview() {
+        function closePreview() {{
             document.getElementById('printPreview').classList.add('hidden');
-        }
+        }}
 
-        function cargarEjemplos() {
-            reportsData = [
-                {
-                    id: "FLT-2026-001",
-                    ot: "OT-88412",
-                    fecha: "2026-09-06 14:30",
-                    cliente: "Minera Pelambres",
-                    faena: "Planta Concentradora",
-                    tag: "BOMBA-HYD-04",
-                    tipo: "Monitoreo de Condición",
-                    criticidad: "ALTA",
-                    inspector: "Carlos Mendoza",
-                    diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico.",
-                    recomendaciones: "Reemplazo inmediato de filtros de retorno y diálisis de aceite.",
-                    foto: null
-                },
-                {
-                    id: "FLT-2026-002",
-                    ot: "OT-88413",
-                    fecha: "2026-09-06 16:15",
-                    cliente: "Atacama Minerals",
-                    faena: "Mina Subterránea",
-                    tag: "RED-PARAMAX-9000",
-                    tipo: "Análisis de Aceite / Fluidos",
-                    criticidad: "MEDIA",
-                    inspector: "Andrea Rojas",
-                    diagnostico: "Viscosidad del fluido ligeramente fuera de rango operacional.",
-                    recomendaciones: "Programar cambio de lubricante en próximo turno de mantenimiento.",
-                    foto: null
-                }
-            ];
-            renderTable();
-        }
-
-        // Render inicial
-        renderTable();
+        function exportCSV() {{
+            if (reportsData.length === 0) return alert('No hay reportes para exportar.');
+            const headers = ["Folio", "OT", "Fecha", "Cliente", "Faena", "Tag", "Tipo", "Criticidad", "Inspector", "Diagnostico", "Recomendaciones"];
+            const rows = reportsData.map(r => [
+                "${{r.id}}", "${{r.ot}}", "${{r.fecha}}", "${{r.cliente}}", "${{r.faena}}",
+                "${{r.tag}}", "${{r.tipo}}", "${{r.criticidad}}", "${{r.inspector}}",
+                "${{(r.diagnostico||'').replace(/"/g, '""')}}", "${{(r.recomendaciones||'').replace(/"/g, '""')}}"
+            ]);
+            const csv = "data:text/csv;charset=utf-8,\\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\\n");
+            const link = document.createElement("a");
+            link.href = encodeURI(csv);
+            link.download = Reportes_Fluitek_${{new Date().toISOString().slice(0,10)}}.csv;
+            link.click();
+        }}
     </script>
 </body>
 </html>
 """
 
-# Renderizar toda la aplicación embebida
-components.html(fluitek_full_app, height=920, scrolling=True)
+# Renderizar en la app de Streamlit
+components.html(fluitek_dashboard_html, height=900, scrolling=True)
