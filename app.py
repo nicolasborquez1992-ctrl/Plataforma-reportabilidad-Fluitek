@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
+# Código HTML, CSS y JavaScript encapsulado
 fluitek_app_html = """
 <!DOCTYPE html>
 <html lang="es">
@@ -48,7 +48,6 @@ fluitek_app_html = """
             .print-card { border: 1px solid #ccc; box-shadow: none !important; }
         }
         .print-only { display: none; }
-        /* Estilo distintivo para marca Fluitek */
         .fluitek-logo-badge {
             background-color: #000000;
             color: #ffffff;
@@ -60,11 +59,10 @@ fluitek_app_html = """
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
-    <!-- Top Navigation Bar -->
+    <!-- Navbar Principal -->
     <header class="bg-slate-900 text-white shadow-lg no-print sticky top-0 z-50 border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <!-- Logo Fluitek: Letras Blancas con Fondo Negro -->
                 <div class="fluitek-logo-badge text-xl px-3.5 py-1 rounded shadow-md border border-slate-700">
                     FLUITEK
                 </div>
@@ -84,10 +82,10 @@ fluitek_app_html = """
         </div>
     </header>
 
-    <!-- Main Content Container -->
+    <!-- Contenedor Principal -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
 
-        <!-- KPI Summary Cards -->
+        <!-- Cards KPI de Resumen -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-slate-900 flex justify-between items-center">
                 <div>
@@ -130,7 +128,7 @@ fluitek_app_html = """
             </div>
         </div>
 
-        <!-- Filter & Search Controls -->
+        <!-- Filtros y Búsqueda -->
         <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
             <div class="flex flex-1 gap-3 w-full md:w-auto">
                 <div class="relative flex-1">
@@ -156,7 +154,7 @@ fluitek_app_html = """
             </button>
         </div>
 
-        <!-- Reports Table View -->
+        <!-- Tabla de Reportes -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden no-print">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -172,21 +170,20 @@ fluitek_app_html = """
                         </tr>
                     </thead>
                     <tbody id="reportsTableBody" class="divide-y text-sm">
-                        <!-- Dynamic Rows -->
+                        <!-- Filas dinámicas -->
                     </tbody>
                 </table>
             </div>
             <div id="emptyState" class="p-8 text-center text-slate-500 hidden">
                 <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
-                <p>No se encontraron reportes con los filtros seleccionados.</p>
+                <p>No se encontraron reportes registrados.</p>
             </div>
         </div>
 
-        <!-- Printable Official Report View -->
+        <!-- Vista de Informe Imprimible (PDF) -->
         <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
             <div class="flex justify-between items-start border-b pb-4 mb-6">
                 <div>
-                    <!-- Logo Fluitek en Informe -->
                     <div class="fluitek-logo-badge text-2xl px-4 py-1.5 rounded tracking-wider shadow">
                         FLUITEK CHILE
                     </div>
@@ -194,7 +191,7 @@ fluitek_app_html = """
                 </div>
                 <div class="text-right">
                     <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
-                    <p id="previewFecha" class="text-xs text-slate-500">Fecha: 06/09/2026</p>
+                    <p id="previewFecha" class="text-xs text-slate-500">Fecha: -</p>
                 </div>
             </div>
 
@@ -214,7 +211,7 @@ fluitek_app_html = """
             <div class="mb-6">
                 <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">ESTADO & CRITICIDAD DEL EQUIPO</h4>
                 <div id="previewBadgeCriticidad" class="inline-block px-4 py-2 rounded font-bold text-sm mb-2">
-                    CRITICIDAD ALTA
+                    CRITICIDAD
                 </div>
                 <div class="grid grid-cols-3 gap-4 text-xs bg-slate-100 p-3 rounded mt-2">
                     <div><strong>Temp. Operación:</strong> <span id="previewTemp">-</span> °C</div>
@@ -237,10 +234,10 @@ fluitek_app_html = """
                 </p>
             </div>
 
-            <!-- MÓDULO 4 EN EL INFORME OFICIAL -->
+            <!-- MÓDULO FOTOGRÁFICO EN INFORME IMPRESO -->
             <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">MÓDULO 4: EVIDENCIA FOTOGRÁFICA EN TERRENO</h4>
-                <div id="previewFotoContainer" class="flex justify-center items-center bg-slate-50 p-4 rounded border border-dashed min-h-[120px]">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">MÓDULO FOTOGRÁFICO: EVIDENCIA EN TERRENO</h4>
+                <div id="previewFotoContainer" class="flex justify-center items-center bg-slate-50 p-4 rounded border border-dashed min-h-[140px]">
                     <p class="text-xs text-slate-400 italic"><i class="fa-solid fa-image mr-1"></i> No se adjuntó evidencia fotográfica.</p>
                 </div>
             </div>
@@ -270,7 +267,7 @@ fluitek_app_html = """
 
     </main>
 
-    <!-- Modal Form: Dynamic New/Edit Report with OT -->
+    <!-- Modal Formulario: Crear/Editar Reporte -->
     <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
@@ -330,7 +327,7 @@ fluitek_app_html = """
                     </div>
                 </div>
 
-                <!-- Parameters Grid -->
+                <!-- Mediciones de Terreno -->
                 <div class="bg-slate-50 p-3 rounded-lg border">
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
                     <div class="grid grid-cols-3 gap-3">
@@ -351,18 +348,18 @@ fluitek_app_html = """
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
-                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
+                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
+                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de filtros o inspección interna..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
-                <!-- MÓDULO 4: ADJUNTAR FOTOGRAFÍA -->
+                <!-- CAMPO PARA ADJUNTAR FOTOGRAFÍA / CÁMARA -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                        <i class="fa-solid fa-camera text-slate-600 mr-1"></i> Módulo 4: Registro Fotográfico / Adjuntar Fotografía
+                        <i class="fa-solid fa-camera text-slate-700 mr-1.5"></i> Adjuntar Fotografía del Trabajo / Evidencia en Terreno
                     </label>
                     <div class="flex flex-col sm:flex-row items-center gap-4">
                         <input type="file" id="inputFoto" accept="image/*" onchange="handleImageUpload(event)" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-black cursor-pointer">
@@ -387,7 +384,7 @@ fluitek_app_html = """
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
+    <!-- Lógica JavaScript -->
     <script>
         let reports = [];
         let currentFotoBase64 = "";
@@ -425,23 +422,6 @@ fluitek_app_html = """
                 iso: "18/16/13",
                 diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
                 recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero.",
-                foto: ""
-            },
-            {
-                id: "FLT-2026-003",
-                ot: "OT-88414",
-                fecha: "2026-09-06 11:00",
-                cliente: "Candelaria",
-                faena: "Área Chancado",
-                tag: "CH-01-LUB-02",
-                tipo: "Mantenimiento Hidráulico",
-                criticidad: "NORMAL",
-                inspector: "Carlos Mendoza",
-                temp: 45,
-                presion: 1200,
-                iso: "15/13/10",
-                diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
-                recomendaciones: "Continuar con plan estándar de lubricación preventiva.",
                 foto: ""
             }
         ];
@@ -514,7 +494,7 @@ fluitek_app_html = """
                         badgeIcon = "fa-circle-exclamation";
                     }
 
-                    const tieneFotoIcon = r.foto ? `<i class="fa-solid fa-camera text-slate-600 ml-1" title="Incluye Fotografía"></i>` : '';
+                    const tieneFotoIcon = r.foto ? `<span class="text-slate-700 ml-1" title="Contiene foto adjunta"><i class="fa-solid fa-camera"></i></span>` : '';
 
                     tr.innerHTML = `
                         <td class="p-4">
@@ -538,7 +518,7 @@ fluitek_app_html = """
                         <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
                         <td class="p-4 text-center">
                             <div class="flex items-center justify-center space-x-2">
-                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-slate-800 hover:bg-slate-100 rounded-lg transition">
+                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe PDF" class="p-2 text-slate-800 hover:bg-slate-100 rounded-lg transition">
                                     <i class="fa-solid fa-file-pdf text-base"></i>
                                 </button>
                                 <button onclick="editReport('${r.id}')" title="Editar" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
@@ -555,7 +535,7 @@ fluitek_app_html = """
             }
         }
 
-        // Manejo de carga de imagen Módulo 4
+        // Procesa la conversión de la imagen a Base64
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -627,7 +607,7 @@ fluitek_app_html = """
         }
 
         function deleteReport(id) {
-            if (confirm('¿Está seguro de que desea eliminar este reporte?')) {
+            if (confirm('¿Está seguro de eliminar este reporte?')) {
                 reports = reports.filter(r => r.id !== id);
                 saveToStorage();
                 renderReports();
@@ -711,7 +691,7 @@ fluitek_app_html = """
                 badge.innerText = "🟢 CONDICIÓN NORMAL";
             }
 
-            // Renderizar foto Módulo 4
+            // Renderizado de fotografía en la vista de informe imprimible
             const fotoContainer = document.getElementById('previewFotoContainer');
             if (r.foto) {
                 fotoContainer.innerHTML = `<img src="${r.foto}" alt="Evidencia Fotográfica" class="max-h-80 rounded-lg shadow border object-contain">`;
@@ -765,5 +745,5 @@ fluitek_app_html = """
 </html>
 """
 
-# Renderizado de la aplicación en Streamlit
-components.html(fluitek_app_html, height=1200, scrolling=True)
+# Renderizado de la aplicación web dentro de Streamlit
+components.html(fluitek_app_html, height=1250, scrolling=True)
