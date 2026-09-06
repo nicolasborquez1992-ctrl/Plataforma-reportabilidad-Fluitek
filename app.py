@@ -66,7 +66,7 @@ fluitek_app_html = """
             </div>
             <div class="flex items-center space-x-3">
                 <button onclick="openNewReportModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center shadow">
-                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte
+                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte / Orden de Trabajo
                 </button>
                 <button onclick="exportDataCSV()" class="bg-fluitek-700 hover:bg-fluitek-600 text-white px-3 py-2 rounded-lg text-sm transition flex items-center">
                     <i class="fa-solid fa-file-excel mr-2"></i> CSV
@@ -126,7 +126,7 @@ fluitek_app_html = """
             <div class="flex flex-1 gap-3 w-full md:w-auto">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por Cliente, Tag de Equipo, Técnico..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por OT, Cliente, Tag, Inspector..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
                 </div>
                 <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
                     <option value="ALL">Todas las Criticidades</option>
@@ -153,7 +153,7 @@ fluitek_app_html = """
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b">
-                            <th class="p-4">Folio / Fecha</th>
+                            <th class="p-4">Folio / OT / Fecha</th>
                             <th class="p-4">Cliente / Faena</th>
                             <th class="p-4">Equipo / Tag</th>
                             <th class="p-4">Tipo de Servicio</th>
@@ -188,9 +188,9 @@ fluitek_app_html = """
 
             <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg mb-6 border text-xs">
                 <div>
+                    <p><strong class="text-slate-700">Orden de Trabajo (OT):</strong> <span id="previewOT" class="font-bold text-amber-700">-</span></p>
                     <p><strong class="text-slate-700">Cliente:</strong> <span id="previewCliente">-</span></p>
                     <p><strong class="text-slate-700">Faena / Planta:</strong> <span id="previewFaena">-</span></p>
-                    <p><strong class="text-slate-700">Ubicación GPS:</strong> <span id="previewGPS">-</span></p>
                 </div>
                 <div>
                     <p><strong class="text-slate-700">Equipo / Tag:</strong> <span id="previewTag">-</span></p>
@@ -214,7 +214,7 @@ fluitek_app_html = """
             <div class="mb-6">
                 <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">DIAGNÓSTICO TÉCNICO & HALLAZGOS</h4>
                 <p id="previewDiagnostico" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 p-3 rounded border">
-                    Sin observaciones registrados.
+                    Sin observaciones registradas.
                 </p>
             </div>
 
@@ -250,13 +250,13 @@ fluitek_app_html = """
 
     </main>
 
-    <!-- Modal Form: Dynamic New/Edit Report -->
+    <!-- Modal Form: Dynamic New/Edit Report with OT -->
     <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="bg-fluitek-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
                 <h3 class="font-bold text-lg flex items-center">
                     <i class="fa-solid fa-file-signature text-amber-400 mr-2"></i> 
-                    <span id="modalTitle">Nuevo Reporte de Campo - Fluitek</span>
+                    <span id="modalTitle">Nuevo Reporte - Orden de Trabajo</span>
                 </h3>
                 <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
                     <i class="fa-solid fa-xmark"></i>
@@ -266,7 +266,12 @@ fluitek_app_html = """
             <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
                 <input type="hidden" id="reportId">
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Orden de Trabajo y Datos Principales -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Orden de Trabajo (OT) *</label>
+                        <input type="text" id="inputOT" required placeholder="Ej: OT-10492" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none font-semibold text-amber-700">
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
                         <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
@@ -300,7 +305,7 @@ fluitek_app_html = """
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Inspector responsable *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Inspector Responsable *</label>
                         <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
                     </div>
                 </div>
@@ -322,16 +327,6 @@ fluitek_app_html = """
                             <input type="text" id="inputISO" placeholder="18/16/13" class="w-full p-1.5 border rounded text-xs">
                         </div>
                     </div>
-                </div>
-
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-bold text-slate-700">Coordenadas / Ubicación GPS</label>
-                        <button type="button" onclick="getGPSLocation()" class="text-xs text-fluitek-600 hover:underline flex items-center">
-                            <i class="fa-solid fa-location-crosshairs mr-1"></i> Capturar GPS Actual
-                        </button>
-                    </div>
-                    <input type="text" id="inputGPS" placeholder="-27.5738, -70.7582" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
                 </div>
 
                 <div>
@@ -363,6 +358,7 @@ fluitek_app_html = """
         const sampleReports = [
             {
                 id: "FLT-2026-001",
+                ot: "OT-88412",
                 fecha: "2026-09-05 14:30",
                 cliente: "Minera Pelambres",
                 faena: "Planta Concentradora",
@@ -373,12 +369,12 @@ fluitek_app_html = """
                 temp: 78,
                 presion: 2100,
                 iso: "21/19/16",
-                gps: "-31.8722, -70.5211",
                 diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
                 recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
             },
             {
                 id: "FLT-2026-002",
+                ot: "OT-88413",
                 fecha: "2026-09-06 09:15",
                 cliente: "Atacama Minerals",
                 faena: "Mina Subterránea",
@@ -389,12 +385,12 @@ fluitek_app_html = """
                 temp: 62,
                 presion: 1450,
                 iso: "18/16/13",
-                gps: "-27.3667, -70.3333",
                 diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
                 recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
             },
             {
                 id: "FLT-2026-003",
+                ot: "OT-88414",
                 fecha: "2026-09-06 11:00",
                 cliente: "Candelaria",
                 faena: "Área Chancado",
@@ -405,7 +401,6 @@ fluitek_app_html = """
                 temp: 45,
                 presion: 1200,
                 iso: "15/13/10",
-                gps: "-27.5738, -70.7582",
                 diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
                 recomendaciones: "Continuar con plan estándar de lubricación preventiva."
             }
@@ -448,7 +443,8 @@ fluitek_app_html = """
                 const matchesSearch = r.cliente.toLowerCase().includes(search) || 
                                      r.tag.toLowerCase().includes(search) || 
                                      r.inspector.toLowerCase().includes(search) ||
-                                     r.id.toLowerCase().includes(search);
+                                     r.id.toLowerCase().includes(search) ||
+                                     (r.ot && r.ot.toLowerCase().includes(search));
                 const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
                 const matchesType = (type === 'ALL') || (r.tipo === type);
                 return matchesSearch && matchesSeverity && matchesType;
@@ -481,6 +477,7 @@ fluitek_app_html = """
                     tr.innerHTML = `
                         <td class="p-4">
                             <span class="font-bold text-fluitek-800">${r.id}</span>
+                            <div class="text-xs font-semibold text-amber-600"><i class="fa-solid fa-hashtag mr-0.5"></i>OT: ${r.ot || 'N/A'}</div>
                             <div class="text-xs text-slate-400">${r.fecha}</div>
                         </td>
                         <td class="p-4">
@@ -519,27 +516,12 @@ fluitek_app_html = """
         function openNewReportModal() {
             document.getElementById('reportForm').reset();
             document.getElementById('reportId').value = '';
-            document.getElementById('modalTitle').innerText = 'Nuevo Reporte de Campo - Fluitek';
+            document.getElementById('modalTitle').innerText = 'Nuevo Reporte - Orden de Trabajo';
             document.getElementById('reportModal').classList.remove('hidden');
         }
 
         function closeReportModal() {
             document.getElementById('reportModal').classList.add('hidden');
-        }
-
-        function getGPSLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lng = position.coords.longitude.toFixed(4);
-                    document.getElementById('inputGPS').value = `${lat}, ${lng}`;
-                }, () => {
-                    alert('No se pudo obtener la geolocalización. Se usará una por defecto.');
-                    document.getElementById('inputGPS').value = "-27.5738, -70.7582";
-                });
-            } else {
-                alert('Geolocalización no soportada por su navegador.');
-            }
         }
 
         function saveReport(e) {
@@ -548,44 +530,37 @@ fluitek_app_html = """
             const now = new Date();
             const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
 
+            const reportData = {
+                ot: document.getElementById('inputOT').value,
+                cliente: document.getElementById('inputCliente').value,
+                faena: document.getElementById('inputFaena').value,
+                tag: document.getElementById('inputTag').value,
+                tipo: document.getElementById('inputTipo').value,
+                criticidad: document.getElementById('inputCriticidad').value,
+                inspector: document.getElementById('inputInspector').value,
+                temp: document.getElementById('inputTemp').value || '-',
+                presion: document.getElementById('inputPresion').value || '-',
+                iso: document.getElementById('inputISO').value || '-',
+                diagnostico: document.getElementById('inputDiagnostico').value,
+                recomendaciones: document.getElementById('inputRecomendaciones').value || 'Sin recomendaciones.'
+            };
+
             if (idInput) {
                 const index = reports.findIndex(r => r.id === idInput);
                 if (index !== -1) {
                     reports[index] = {
                         ...reports[index],
-                        cliente: document.getElementById('inputCliente').value,
-                        faena: document.getElementById('inputFaena').value,
-                        tag: document.getElementById('inputTag').value,
-                        tipo: document.getElementById('inputTipo').value,
-                        criticidad: document.getElementById('inputCriticidad').value,
-                        inspector: document.getElementById('inputInspector').value,
-                        temp: document.getElementById('inputTemp').value || '-',
-                        presion: document.getElementById('inputPresion').value || '-',
-                        iso: document.getElementById('inputISO').value || '-',
-                        gps: document.getElementById('inputGPS').value || 'N/A',
-                        diagnostico: document.getElementById('inputDiagnostico').value,
-                        recomendaciones: document.getElementById('inputRecomendaciones').value
+                        ...reportData
                     };
                 }
             } else {
-                const folioNum = String(reports.length + 1).padStart(3, '0');
-                const newReport = {
-                    id: `FLT-2026-${folioNum}`,
+                const newFolioNumber = reports.length + 1;
+                const newFolio = `FLT-2026-${String(newFolioNumber).padStart(3, '0')}`;
+                reports.unshift({
+                    id: newFolio,
                     fecha: dateStr,
-                    cliente: document.getElementById('inputCliente').value,
-                    faena: document.getElementById('inputFaena').value,
-                    tag: document.getElementById('inputTag').value,
-                    tipo: document.getElementById('inputTipo').value,
-                    criticidad: document.getElementById('inputCriticidad').value,
-                    inspector: document.getElementById('inputInspector').value,
-                    temp: document.getElementById('inputTemp').value || '-',
-                    presion: document.getElementById('inputPresion').value || '-',
-                    iso: document.getElementById('inputISO').value || '-',
-                    gps: document.getElementById('inputGPS').value || 'N/A',
-                    diagnostico: document.getElementById('inputDiagnostico').value,
-                    recomendaciones: document.getElementById('inputRecomendaciones').value
-                };
-                reports.unshift(newReport);
+                    ...reportData
+                });
             }
 
             saveToStorage();
@@ -594,29 +569,29 @@ fluitek_app_html = """
         }
 
         function editReport(id) {
-            const item = reports.find(r => r.id === id);
-            if (!item) return;
+            const r = reports.find(item => item.id === id);
+            if (!r) return;
 
-            document.getElementById('reportId').value = item.id;
-            document.getElementById('inputCliente').value = item.cliente;
-            document.getElementById('inputFaena').value = item.faena;
-            document.getElementById('inputTag').value = item.tag;
-            document.getElementById('inputTipo').value = item.tipo;
-            document.getElementById('inputCriticidad').value = item.criticidad;
-            document.getElementById('inputInspector').value = item.inspector;
-            document.getElementById('inputTemp').value = item.temp || '';
-            document.getElementById('inputPresion').value = item.presion || '';
-            document.getElementById('inputISO').value = item.iso || '';
-            document.getElementById('inputGPS').value = item.gps || '';
-            document.getElementById('inputDiagnostico').value = item.diagnostico;
-            document.getElementById('inputRecomendaciones').value = item.recomendaciones;
+            document.getElementById('reportId').value = r.id;
+            document.getElementById('modalTitle').innerText = `Editar Reporte: ${r.id}`;
+            document.getElementById('inputOT').value = r.ot || '';
+            document.getElementById('inputCliente').value = r.cliente || '';
+            document.getElementById('inputFaena').value = r.faena || '';
+            document.getElementById('inputTag').value = r.tag || '';
+            document.getElementById('inputTipo').value = r.tipo || 'Monitoreo de Condición';
+            document.getElementById('inputCriticidad').value = r.criticidad || 'NORMAL';
+            document.getElementById('inputInspector').value = r.inspector || '';
+            document.getElementById('inputTemp').value = r.temp !== '-' ? r.temp : '';
+            document.getElementById('inputPresion').value = r.presion !== '-' ? r.presion : '';
+            document.getElementById('inputISO').value = r.iso !== '-' ? r.iso : '';
+            document.getElementById('inputDiagnostico').value = r.diagnostico || '';
+            document.getElementById('inputRecomendaciones').value = r.recomendaciones || '';
 
-            document.getElementById('modalTitle').innerText = `Editar Reporte ${item.id}`;
             document.getElementById('reportModal').classList.remove('hidden');
         }
 
         function deleteReport(id) {
-            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
+            if (confirm(`¿Está seguro de que desea eliminar el reporte ${id}?`)) {
                 reports = reports.filter(r => r.id !== id);
                 saveToStorage();
                 renderReports();
@@ -624,36 +599,36 @@ fluitek_app_html = """
         }
 
         function previewReport(id) {
-            const item = reports.find(r => r.id === id);
-            if (!item) return;
+            const r = reports.find(item => item.id === id);
+            if (!r) return;
 
-            document.getElementById('previewFolio').innerText = `FOLIO: ${item.id}`;
-            document.getElementById('previewFecha').innerText = `Fecha: ${item.fecha}`;
-            document.getElementById('previewCliente').innerText = item.cliente;
-            document.getElementById('previewFaena').innerText = item.faena;
-            document.getElementById('previewGPS').innerText = item.gps;
-            document.getElementById('previewTag').innerText = item.tag;
-            document.getElementById('previewTipo').innerText = item.tipo;
-            document.getElementById('previewInspector').innerText = item.inspector;
-            document.getElementById('previewFirmaTecnico').innerText = item.inspector;
+            document.getElementById('previewFolio').innerText = `FOLIO: ${r.id}`;
+            document.getElementById('previewFecha').innerText = `Fecha: ${r.fecha}`;
+            document.getElementById('previewOT').innerText = r.ot || 'N/A';
+            document.getElementById('previewCliente').innerText = r.cliente;
+            document.getElementById('previewFaena').innerText = r.faena;
+            document.getElementById('previewTag').innerText = r.tag;
+            document.getElementById('previewTipo').innerText = r.tipo;
+            document.getElementById('previewInspector').innerText = r.inspector;
+            document.getElementById('previewFirmaTecnico').innerText = r.inspector;
 
-            document.getElementById('previewTemp').innerText = item.temp;
-            document.getElementById('previewPresion').innerText = item.presion;
-            document.getElementById('previewISO').innerText = item.iso;
+            document.getElementById('previewTemp').innerText = r.temp;
+            document.getElementById('previewPresion').innerText = r.presion;
+            document.getElementById('previewISO').innerText = r.iso;
 
-            document.getElementById('previewDiagnostico').innerText = item.diagnostico || 'Sin observaciones.';
-            document.getElementById('previewRecomendaciones').innerText = item.recomendaciones || 'Sin recomendaciones registradas.';
+            document.getElementById('previewDiagnostico').innerText = r.diagnostico || 'Sin observaciones.';
+            document.getElementById('previewRecomendaciones').innerText = r.recomendaciones || 'Sin recomendaciones.';
 
             const badge = document.getElementById('previewBadgeCriticidad');
-            if (item.criticidad === 'ALTA') {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-600 text-white";
-                badge.innerText = "CRITICIDAD ALTA / ALARMA TÉCNICA";
-            } else if (item.criticidad === 'MEDIA') {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-500 text-white";
+            if (r.criticidad === 'ALTA') {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-100 text-red-800 border border-red-300";
+                badge.innerText = "CRITICIDAD ALTA / ALARMA";
+            } else if (r.criticidad === 'MEDIA') {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-100 text-amber-800 border border-amber-300";
                 badge.innerText = "CRITICIDAD MEDIA / ADVERTENCIA";
             } else {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-600 text-white";
-                badge.innerText = "CONDICIÓN OPERATIVA NORMAL";
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-100 text-emerald-800 border border-emerald-300";
+                badge.innerText = "CONDICIÓN NORMAL";
             }
 
             const container = document.getElementById('printPreviewContainer');
@@ -670,34 +645,29 @@ fluitek_app_html = """
                 alert('No hay datos para exportar.');
                 return;
             }
+            const headers = ["Folio", "Fecha", "Orden de Trabajo", "Cliente", "Faena", "Tag", "Tipo Servicio", "Criticidad", "Inspector", "Temp (C)", "Presion (PSI)", "Codigo ISO", "Diagnostico", "Recomendaciones"];
+            const rows = reports.map(r => [
+                `"${r.id}"`,
+                `"${r.fecha}"`,
+                `"${r.ot || ''}"`,
+                `"${r.cliente}"`,
+                `"${r.faena}"`,
+                `"${r.tag}"`,
+                `"${r.tipo}"`,
+                `"${r.criticidad}"`,
+                `"${r.inspector}"`,
+                `"${r.temp}"`,
+                `"${r.presion}"`,
+                `"${r.iso}"`,
+                `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
+                `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
+            ]);
 
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\\n";
-
-            reports.forEach(r => {
-                const row = [
-                    `"${r.id}"`,
-                    `"${r.fecha}"`,
-                    `"${r.cliente}"`,
-                    `"${r.faena}"`,
-                    `"${r.tag}"`,
-                    `"${r.tipo}"`,
-                    `"${r.criticidad}"`,
-                    `"${r.inspector}"`,
-                    `"${r.temp}"`,
-                    `"${r.presion}"`,
-                    `"${r.iso}"`,
-                    `"${r.gps}"`,
-                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
-                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
-                ].join(",");
-                csvContent += row + "\\n";
-            });
-
+            const csvContent = "data:text/csv;charset=utf-8,\\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\\n");
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", `Reportes_Fluitek_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -707,5 +677,5 @@ fluitek_app_html = """
 </html>
 """
 
-# Inyección del HTML dentro del componente de Streamlit
+# Renderizar el componente en la app de Streamlit
 components.html(fluitek_app_html, height=1000, scrolling=True)
