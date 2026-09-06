@@ -3,13 +3,13 @@ import streamlit.components.v1 as components
 
 # Configuración de la página en Streamlit
 st.set_page_config(
-    page_title="Fluitek Marco - Reportes Técnicos",
+    page_title="Fluitek - Reportes Técnicos",
     page_icon="⚙️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
+# Código HTML, CSS y JavaScript encapsulado
 fluitek_app_html = """
 <!DOCTYPE html>
 <html lang="es">
@@ -48,7 +48,6 @@ fluitek_app_html = """
             .print-card { border: 1px solid #ccc; box-shadow: none !important; }
         }
         .print-only { display: none; }
-        /* Estilo distintivo para marca Fluitek */
         .fluitek-logo-badge {
             background-color: #000000;
             color: #ffffff;
@@ -64,7 +63,6 @@ fluitek_app_html = """
     <header class="bg-slate-900 text-white shadow-lg no-print sticky top-0 z-50 border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <!-- Logo Fluitek: Letras Blancas con Fondo Negro -->
                 <div class="fluitek-logo-badge text-xl px-3.5 py-1 rounded shadow-md border border-slate-700">
                     FLUITEK
                 </div>
@@ -187,7 +185,6 @@ fluitek_app_html = """
         <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
             <div class="flex justify-between items-start border-b pb-4 mb-6">
                 <div>
-                    <!-- Logo Fluitek en Informe: Letras Blancas sobre Fondo Negro -->
                     <div class="fluitek-logo-badge text-2xl px-4 py-1.5 rounded tracking-wider shadow">
                         FLUITEK CHILE
                     </div>
@@ -231,7 +228,7 @@ fluitek_app_html = """
                 </p>
             </div>
 
-            <!-- APARTADO DE FOTOGRAFÍA DE TERRENO EN EL INFORME IMPRIMIBLE -->
+            <!-- EVIDENCIA FOTOGRÁFICA DE TERRENO EN INFORME -->
             <div class="mb-6">
                 <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">EVIDENCIA FOTOGRÁFICA DE TERRENO</h4>
                 <div class="bg-slate-50 p-3 rounded border text-center">
@@ -275,7 +272,7 @@ fluitek_app_html = """
 
     </main>
 
-    <!-- Modal Form: Dynamic New/Edit Report with OT & Terreno Photo -->
+    <!-- Modal Form: Dynamic New/Edit Report -->
     <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
@@ -283,7 +280,7 @@ fluitek_app_html = """
                     <span class="fluitek-logo-badge text-xs px-2 py-0.5 rounded mr-2">FLUITEK</span> 
                     <span id="modalTitle">Nuevo Reporte - Orden de Trabajo</span>
                 </h3>
-                <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
+                <button onclick="closeReportModal()" type="button" class="text-slate-300 hover:text-white text-xl">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -291,7 +288,6 @@ fluitek_app_html = """
             <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
                 <input type="hidden" id="reportId">
 
-                <!-- Orden de Trabajo y Datos Principales -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Orden de Trabajo (OT) *</label>
@@ -335,7 +331,6 @@ fluitek_app_html = """
                     </div>
                 </div>
 
-                <!-- Parameters Grid -->
                 <div class="bg-slate-50 p-3 rounded-lg border">
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
                     <div class="grid grid-cols-3 gap-3">
@@ -354,13 +349,12 @@ fluitek_app_html = """
                     </div>
                 </div>
 
-                <!-- APARTADO PARA ADJUNTAR FOTOGRAFÍA DE TERRENO -->
                 <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200">
                     <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center">
                         <i class="fa-solid fa-camera text-amber-600 mr-2 text-sm"></i>
                         Fotografía de Terreno / Evidencia Fotográfica
                     </label>
-                    <p class="text-[11px] text-slate-500 mb-2">Adjunte una captura del equipo, fuga, componente inspeccionado o punto de monitoreo.</p>
+                    <p class="text-[11px] text-slate-500 mb-2">Adjunte una captura del equipo, componente inspeccionado o muestra.</p>
                     
                     <div class="flex flex-col md:flex-row gap-4 items-center">
                         <input type="file" id="inputFoto" accept="image/*" onchange="handleFotoUpload(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-black cursor-pointer">
@@ -369,7 +363,6 @@ fluitek_app_html = """
                         </button>
                     </div>
 
-                    <!-- Previsualización de la foto seleccionada -->
                     <div id="modalFotoContainer" class="mt-3 hidden">
                         <div class="relative inline-block border rounded-lg overflow-hidden bg-white p-1 shadow-sm">
                             <img id="modalFotoPreview" src="" class="h-32 object-cover rounded" alt="Previsualización terreno">
@@ -384,7 +377,7 @@ fluitek_app_html = """
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
+                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4 border-t">
@@ -402,7 +395,7 @@ fluitek_app_html = """
     <!-- JavaScript Application Logic -->
     <script>
         let reports = [];
-        let currentFotoBase64 = ""; // Almacena temporalmente la foto en base64
+        let currentFotoBase64 = "";
 
         const sampleReports = [
             {
@@ -458,49 +451,85 @@ fluitek_app_html = """
             }
         ];
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('fluitek_reports');
-            if (saved) {
-                try {
-                    reports = JSON.parse(saved);
-                } catch(e) {
-                    reports = sampleReports;
-                }
+        function safeGetStorage() {
+            try {
+                const saved = localStorage.getItem('fluitek_reports');
+                if (saved) return JSON.parse(saved);
+            } catch (e) {
+                console.warn('localStorage no disponible en este entorno, usando almacenamiento en memoria.');
+            }
+            return null;
+        }
+
+        function safeSetStorage() {
+            try {
+                localStorage.setItem('fluitek_reports', JSON.stringify(reports));
+            } catch (e) {
+                console.warn('No se pudo guardar en localStorage.');
+            }
+        }
+
+        function initApp() {
+            const savedData = safeGetStorage();
+            if (savedData && savedData.length > 0) {
+                reports = savedData;
             } else {
-                reports = sampleReports;
-                saveToStorage();
+                reports = sampleReports.map(item => ({ ...item }));
+                safeSetStorage();
             }
             renderReports();
-        });
-
-        function saveToStorage() {
-            localStorage.setItem('fluitek_reports', JSON.stringify(reports));
         }
 
         function loadSampleData() {
-            reports = [...sampleReports];
-            saveToStorage();
+            reports = sampleReports.map(item => ({ ...item }));
+            safeSetStorage();
             renderReports();
         }
 
-        // Función para procesar y cargar la fotografía de terreno
+        // Compresión optimizada para fotos de terreno/celular
         function handleFotoUpload(e) {
             const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    currentFotoBase64 = evt.target.result;
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const maxDim = 1000;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    currentFotoBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
                     document.getElementById('modalFotoPreview').src = currentFotoBase64;
                     document.getElementById('modalFotoContainer').classList.remove('hidden');
                     document.getElementById('btnRemoveFoto').classList.remove('hidden');
                 };
-                reader.readAsDataURL(file);
-            }
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         function clearFoto() {
             currentFotoBase64 = "";
-            document.getElementById('inputFoto').value = "";
+            const inputEl = document.getElementById('inputFoto');
+            if (inputEl) inputEl.value = "";
             document.getElementById('modalFotoPreview').src = "";
             document.getElementById('modalFotoContainer').classList.add('hidden');
             document.getElementById('btnRemoveFoto').classList.add('hidden');
@@ -508,18 +537,25 @@ fluitek_app_html = """
 
         function renderReports() {
             const tbody = document.getElementById('reportsTableBody');
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const severity = document.getElementById('filterSeverity').value;
-            const type = document.getElementById('filterType').value;
+            if (!tbody) return;
+
+            const searchInput = document.getElementById('searchInput');
+            const search = searchInput ? searchInput.value.toLowerCase() : '';
+            
+            const severityFilter = document.getElementById('filterSeverity');
+            const severity = severityFilter ? severityFilter.value : 'ALL';
+            
+            const typeFilter = document.getElementById('filterType');
+            const type = typeFilter ? typeFilter.value : 'ALL';
 
             tbody.innerHTML = '';
 
             let filtered = reports.filter(r => {
-                const matchesSearch = r.cliente.toLowerCase().includes(search) || 
-                                     r.tag.toLowerCase().includes(search) || 
-                                     r.inspector.toLowerCase().includes(search) ||
-                                     r.id.toLowerCase().includes(search) ||
-                                     (r.ot && r.ot.toLowerCase().includes(search));
+                const matchesSearch = (r.cliente || '').toLowerCase().includes(search) || 
+                                     (r.tag || '').toLowerCase().includes(search) || 
+                                     (r.inspector || '').toLowerCase().includes(search) ||
+                                     (r.id || '').toLowerCase().includes(search) ||
+                                     (r.ot || '').toLowerCase().includes(search);
                 const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
                 const matchesType = (type === 'ALL') || (r.tipo === type);
                 return matchesSearch && matchesSeverity && matchesType;
@@ -644,7 +680,7 @@ fluitek_app_html = """
                 });
             }
 
-            saveToStorage();
+            safeSetStorage();
             closeReportModal();
             renderReports();
         }
@@ -661,9 +697,9 @@ fluitek_app_html = """
             document.getElementById('inputTipo').value = r.tipo || 'Monitoreo de Condición';
             document.getElementById('inputCriticidad').value = r.criticidad || 'NORMAL';
             document.getElementById('inputInspector').value = r.inspector || '';
-            document.getElementById('inputTemp').value = r.temp !== '-' ? r.temp : '';
-            document.getElementById('inputPresion').value = r.presion !== '-' ? r.presion : '';
-            document.getElementById('inputISO').value = r.iso !== '-' ? r.iso : '';
+            document.getElementById('inputTemp').value = (r.temp !== '-' && r.temp !== undefined) ? r.temp : '';
+            document.getElementById('inputPresion').value = (r.presion !== '-' && r.presion !== undefined) ? r.presion : '';
+            document.getElementById('inputISO').value = (r.iso !== '-' && r.iso !== undefined) ? r.iso : '';
             document.getElementById('inputDiagnostico').value = r.diagnostico || '';
             document.getElementById('inputRecomendaciones').value = r.recomendaciones || '';
 
@@ -683,7 +719,7 @@ fluitek_app_html = """
         function deleteReport(id) {
             if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
                 reports = reports.filter(r => r.id !== id);
-                saveToStorage();
+                safeSetStorage();
                 renderReports();
             }
         }
@@ -719,7 +755,6 @@ fluitek_app_html = """
                 badge.innerText = "🟢 CONDICIÓN NORMAL";
             }
 
-            // Carga de Fotografía en la vista imprimible
             const imgEl = document.getElementById('previewFoto');
             const placeholderEl = document.getElementById('previewFotoPlaceholder');
             if (r.foto) {
@@ -777,10 +812,17 @@ fluitek_app_html = """
             link.click();
             document.body.removeChild(link);
         }
+
+        // Ejecución inicial segura
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
     </script>
 </body>
 </html>
 """
 
-# Renderizar la aplicación dentro de Streamlit
+# Renderizar componente en Streamlit
 components.html(fluitek_app_html, height=1050, scrolling=True)
