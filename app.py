@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 # Configuración de la página en Streamlit
 st.set_page_config(
-    page_title="Fluitek Marco- Reportes Técnicos",
+    page_title="Fluitek Marco - Reportes Técnicos",
     page_icon="⚙️",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -167,6 +167,7 @@ fluitek_app_html = """
                             <th class="p-4">Equipo / Tag</th>
                             <th class="p-4">Tipo de Servicio</th>
                             <th class="p-4">Criticidad</th>
+                            <th class="p-4">Foto Terreno</th>
                             <th class="p-4">Inspector</th>
                             <th class="p-4 text-center">Acciones</th>
                         </tr>
@@ -230,6 +231,18 @@ fluitek_app_html = """
                 </p>
             </div>
 
+            <!-- APARTADO DE FOTOGRAFÍA DE TERRENO EN EL INFORME IMPRIMIBLE -->
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">EVIDENCIA FOTOGRÁFICA DE TERRENO</h4>
+                <div class="bg-slate-50 p-3 rounded border text-center">
+                    <img id="previewFoto" src="" class="max-h-80 mx-auto rounded-lg shadow-sm border object-contain hidden" alt="Fotografía de Terreno">
+                    <p id="previewFotoPlaceholder" class="text-xs text-slate-400 py-6">
+                        <i class="fa-solid fa-camera text-2xl mb-1 block text-slate-300"></i>
+                        Sin fotografía de terreno adjunta a este reporte.
+                    </p>
+                </div>
+            </div>
+
             <div class="mb-6">
                 <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">RECOMENDACIONES DE ACCIÓN</h4>
                 <p id="previewRecomendaciones" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-amber-50/50 p-3 rounded border border-amber-200">
@@ -262,7 +275,7 @@ fluitek_app_html = """
 
     </main>
 
-    <!-- Modal Form: Dynamic New/Edit Report with OT -->
+    <!-- Modal Form: Dynamic New/Edit Report with OT & Terreno Photo -->
     <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
@@ -341,6 +354,29 @@ fluitek_app_html = """
                     </div>
                 </div>
 
+                <!-- APARTADO PARA ADJUNTAR FOTOGRAFÍA DE TERRENO -->
+                <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200">
+                    <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center">
+                        <i class="fa-solid fa-camera text-amber-600 mr-2 text-sm"></i>
+                        Fotografía de Terreno / Evidencia Fotográfica
+                    </label>
+                    <p class="text-[11px] text-slate-500 mb-2">Adjunte una captura del equipo, fuga, componente inspeccionado o punto de monitoreo.</p>
+                    
+                    <div class="flex flex-col md:flex-row gap-4 items-center">
+                        <input type="file" id="inputFoto" accept="image/*" onchange="handleFotoUpload(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-black cursor-pointer">
+                        <button type="button" onclick="clearFoto()" id="btnRemoveFoto" class="text-xs text-red-600 hover:text-red-800 underline font-semibold hidden">
+                            <i class="fa-solid fa-trash mr-1"></i> Quitar Foto
+                        </button>
+                    </div>
+
+                    <!-- Previsualización de la foto seleccionada -->
+                    <div id="modalFotoContainer" class="mt-3 hidden">
+                        <div class="relative inline-block border rounded-lg overflow-hidden bg-white p-1 shadow-sm">
+                            <img id="modalFotoPreview" src="" class="h-32 object-cover rounded" alt="Previsualización terreno">
+                        </div>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
                     <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
@@ -366,6 +402,7 @@ fluitek_app_html = """
     <!-- JavaScript Application Logic -->
     <script>
         let reports = [];
+        let currentFotoBase64 = ""; // Almacena temporalmente la foto en base64
 
         const sampleReports = [
             {
@@ -382,7 +419,8 @@ fluitek_app_html = """
                 presion: 2100,
                 iso: "21/19/16",
                 diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
-                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
+                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas.",
+                foto: ""
             },
             {
                 id: "FLT-2026-002",
@@ -398,7 +436,8 @@ fluitek_app_html = """
                 presion: 1450,
                 iso: "18/16/13",
                 diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
-                recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
+                recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero.",
+                foto: ""
             },
             {
                 id: "FLT-2026-003",
@@ -414,7 +453,8 @@ fluitek_app_html = """
                 presion: 1200,
                 iso: "15/13/10",
                 diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
-                recomendaciones: "Continuar con plan estándar de lubricación preventiva."
+                recomendaciones: "Continuar con plan estándar de lubricación preventiva.",
+                foto: ""
             }
         ];
 
@@ -441,6 +481,29 @@ fluitek_app_html = """
             reports = [...sampleReports];
             saveToStorage();
             renderReports();
+        }
+
+        // Función para procesar y cargar la fotografía de terreno
+        function handleFotoUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    currentFotoBase64 = evt.target.result;
+                    document.getElementById('modalFotoPreview').src = currentFotoBase64;
+                    document.getElementById('modalFotoContainer').classList.remove('hidden');
+                    document.getElementById('btnRemoveFoto').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function clearFoto() {
+            currentFotoBase64 = "";
+            document.getElementById('inputFoto').value = "";
+            document.getElementById('modalFotoPreview').src = "";
+            document.getElementById('modalFotoContainer').classList.add('hidden');
+            document.getElementById('btnRemoveFoto').classList.add('hidden');
         }
 
         function renderReports() {
@@ -486,6 +549,10 @@ fluitek_app_html = """
                         badgeIcon = "fa-circle-exclamation";
                     }
 
+                    const fotoBadge = r.foto ? 
+                        `<span class="inline-flex items-center text-xs text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-camera mr-1"></i> Adjunta</span>` : 
+                        `<span class="text-xs text-slate-400">Sin foto</span>`;
+
                     tr.innerHTML = `
                         <td class="p-4">
                             <span class="font-bold text-slate-900">${r.id}</span>
@@ -505,6 +572,7 @@ fluitek_app_html = """
                                 <i class="fa-solid ${badgeIcon} mr-1.5 text-[10px]"></i> ${r.criticidad}
                             </span>
                         </td>
+                        <td class="p-4">${fotoBadge}</td>
                         <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
                         <td class="p-4 text-center">
                             <div class="flex items-center justify-center space-x-2">
@@ -528,6 +596,7 @@ fluitek_app_html = """
         function openNewReportModal() {
             document.getElementById('reportForm').reset();
             document.getElementById('reportId').value = '';
+            clearFoto();
             document.getElementById('modalTitle').innerText = 'Nuevo Reporte - Orden de Trabajo';
             document.getElementById('reportModal').classList.remove('hidden');
         }
@@ -554,7 +623,8 @@ fluitek_app_html = """
                 presion: document.getElementById('inputPresion').value || '-',
                 iso: document.getElementById('inputISO').value || '-',
                 diagnostico: document.getElementById('inputDiagnostico').value,
-                recomendaciones: document.getElementById('inputRecomendaciones').value || 'Sin recomendaciones.'
+                recomendaciones: document.getElementById('inputRecomendaciones').value || 'Sin recomendaciones.',
+                foto: currentFotoBase64 || ""
             };
 
             if (idInput) {
@@ -566,18 +636,17 @@ fluitek_app_html = """
                     };
                 }
             } else {
-                const newFolioNumber = reports.length + 1;
-                const newFolio = `FLT-2026-${String(newFolioNumber).padStart(3, '0')}`;
+                const newId = 'FLT-' + now.getFullYear() + '-' + String(reports.length + 1).padStart(3, '0');
                 reports.unshift({
-                    id: newFolio,
+                    id: newId,
                     fecha: dateStr,
                     ...reportData
                 });
             }
 
             saveToStorage();
-            renderReports();
             closeReportModal();
+            renderReports();
         }
 
         function editReport(id) {
@@ -585,7 +654,6 @@ fluitek_app_html = """
             if (!r) return;
 
             document.getElementById('reportId').value = r.id;
-            document.getElementById('modalTitle').innerText = `Editar Reporte: ${r.id}`;
             document.getElementById('inputOT').value = r.ot || '';
             document.getElementById('inputCliente').value = r.cliente || '';
             document.getElementById('inputFaena').value = r.faena || '';
@@ -599,11 +667,21 @@ fluitek_app_html = """
             document.getElementById('inputDiagnostico').value = r.diagnostico || '';
             document.getElementById('inputRecomendaciones').value = r.recomendaciones || '';
 
+            currentFotoBase64 = r.foto || '';
+            if (currentFotoBase64) {
+                document.getElementById('modalFotoPreview').src = currentFotoBase64;
+                document.getElementById('modalFotoContainer').classList.remove('hidden');
+                document.getElementById('btnRemoveFoto').classList.remove('hidden');
+            } else {
+                clearFoto();
+            }
+
+            document.getElementById('modalTitle').innerText = 'Editar Reporte ' + r.id;
             document.getElementById('reportModal').classList.remove('hidden');
         }
 
         function deleteReport(id) {
-            if (confirm(`¿Está seguro de que desea eliminar el reporte ${id}?`)) {
+            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
                 reports = reports.filter(r => r.id !== id);
                 saveToStorage();
                 renderReports();
@@ -614,8 +692,8 @@ fluitek_app_html = """
             const r = reports.find(item => item.id === id);
             if (!r) return;
 
-            document.getElementById('previewFolio').innerText = `FOLIO: ${r.id}`;
-            document.getElementById('previewFecha').innerText = `Fecha: ${r.fecha}`;
+            document.getElementById('previewFolio').innerText = 'FOLIO: ' + r.id;
+            document.getElementById('previewFecha').innerText = 'Fecha: ' + r.fecha;
             document.getElementById('previewOT').innerText = r.ot || 'N/A';
             document.getElementById('previewCliente').innerText = r.cliente;
             document.getElementById('previewFaena').innerText = r.faena;
@@ -623,24 +701,35 @@ fluitek_app_html = """
             document.getElementById('previewTipo').innerText = r.tipo;
             document.getElementById('previewInspector').innerText = r.inspector;
             document.getElementById('previewFirmaTecnico').innerText = r.inspector;
-
             document.getElementById('previewTemp').innerText = r.temp;
             document.getElementById('previewPresion').innerText = r.presion;
             document.getElementById('previewISO').innerText = r.iso;
-
-            document.getElementById('previewDiagnostico').innerText = r.diagnostico || 'Sin observaciones.';
-            document.getElementById('previewRecomendaciones').innerText = r.recomendaciones || 'Sin recomendaciones.';
+            document.getElementById('previewDiagnostico').innerText = r.diagnostico;
+            document.getElementById('previewRecomendaciones').innerText = r.recomendaciones;
 
             const badge = document.getElementById('previewBadgeCriticidad');
             if (r.criticidad === 'ALTA') {
                 badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-100 text-red-800 border border-red-300";
-                badge.innerText = "CRITICIDAD ALTA / ALARMA";
+                badge.innerText = "🔴 CRITICIDAD ALTA / ALARMA";
             } else if (r.criticidad === 'MEDIA') {
                 badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-100 text-amber-800 border border-amber-300";
-                badge.innerText = "CRITICIDAD MEDIA / ADVERTENCIA";
+                badge.innerText = "🟡 ADVERTENCIA / PRECAUCIÓN";
             } else {
                 badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-100 text-emerald-800 border border-emerald-300";
-                badge.innerText = "CONDICIÓN NORMAL";
+                badge.innerText = "🟢 CONDICIÓN NORMAL";
+            }
+
+            // Carga de Fotografía en la vista imprimible
+            const imgEl = document.getElementById('previewFoto');
+            const placeholderEl = document.getElementById('previewFotoPlaceholder');
+            if (r.foto) {
+                imgEl.src = r.foto;
+                imgEl.classList.remove('hidden');
+                placeholderEl.classList.add('hidden');
+            } else {
+                imgEl.src = '';
+                imgEl.classList.add('hidden');
+                placeholderEl.classList.remove('hidden');
             }
 
             const container = document.getElementById('printPreviewContainer');
@@ -654,32 +743,36 @@ fluitek_app_html = """
 
         function exportDataCSV() {
             if (reports.length === 0) {
-                alert('No hay datos para exportar.');
+                alert("No hay reportes para exportar.");
                 return;
             }
-            const headers = ["Folio", "Fecha", "Orden de Trabajo", "Cliente", "Faena", "Tag", "Tipo Servicio", "Criticidad", "Inspector", "Temp (C)", "Presion (PSI)", "Codigo ISO", "Diagnostico", "Recomendaciones"];
-            const rows = reports.map(r => [
-                `"${r.id}"`,
-                `"${r.fecha}"`,
-                `"${r.ot || ''}"`,
-                `"${r.cliente}"`,
-                `"${r.faena}"`,
-                `"${r.tag}"`,
-                `"${r.tipo}"`,
-                `"${r.criticidad}"`,
-                `"${r.inspector}"`,
-                `"${r.temp}"`,
-                `"${r.presion}"`,
-                `"${r.iso}"`,
-                `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
-                `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
-            ]);
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "ID,OT,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,Diagnostico,Recomendaciones\n";
 
-            const csvContent = "data:text/csv;charset=utf-8,\\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\\n");
+            reports.forEach(r => {
+                let row = [
+                    `"${r.id}"`,
+                    `"${r.ot || ''}"`,
+                    `"${r.fecha}"`,
+                    `"${r.cliente}"`,
+                    `"${r.faena}"`,
+                    `"${r.tag}"`,
+                    `"${r.tipo}"`,
+                    `"${r.criticidad}"`,
+                    `"${r.inspector}"`,
+                    `"${r.temp}"`,
+                    `"${r.presion}"`,
+                    `"${r.iso}"`,
+                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
+                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Reportes_Fluitek_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", "reportes_fluitek.csv");
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -689,5 +782,5 @@ fluitek_app_html = """
 </html>
 """
 
-# Renderizar el componente en la app de Streamlit
-components.html(fluitek_app_html, height=1000, scrolling=True)
+# Renderizar la aplicación dentro de Streamlit
+components.html(fluitek_app_html, height=1050, scrolling=True)
