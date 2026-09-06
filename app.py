@@ -770,3 +770,122 @@ components.html(
     height=1000, 
     scrolling=True
 )
+import streamlit as st
+import streamlit.components.v1 as components
+import pandas as pd
+from datetime import datetime
+
+# Configuración de página
+st.set_page_config(
+    page_title="Fluitek - Reportes Técnicos",
+    page_icon="⚙️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Inicializar estado para guardar reportes en la sesión
+if "reports" not in st.session_state:
+    st.session_state.reports = [
+        {
+            "id": "FLT-2026-001",
+            "ot": "OT-88412",
+            "fecha": "2026-09-05 14:30",
+            "cliente": "Minera Pelambres",
+            "faena": "Planta Concentradora",
+            "tag": "BOMBA-HYD-04",
+            "tipo": "Monitoreo de Condición",
+            "criticidad": "ALTA",
+            "inspector": "Carlos Mendoza",
+            "diagnostico": "Elevada temperatura y partículas metálicas en muestra.",
+            "recomendaciones": "Reemplazo inmediato de filtros de retorno."
+        }
+    ]
+
+# --- MODAL NATIVO DE STREAMLIT PARA NUEVO REPORTE ---
+@st.dialog("📝 Nuevo Reporte / Orden de Trabajo")
+def modal_nuevo_reporte():
+    with st.form("form_reporte", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            ot = st.text_input("Orden de Trabajo (OT) *", placeholder="Ej: OT-10492")
+            cliente = st.text_input("Cliente *", placeholder="Ej: Minera Candelaria")
+            faena = st.text_input("Faena / Planta *", placeholder="Ej: Concentradora")
+            tag = st.text_input("Equipo / Tag ID *", placeholder="Ej: RED-9000-A")
+        
+        with col2:
+            tipo = st.selectbox("Tipo de Servicio", [
+                "Monitoreo de Condición", 
+                "Análisis de Aceite / Fluidos", 
+                "Mantenimiento Hidráulico", 
+                "Inspección General"
+            ])
+            criticidad = st.selectbox("Nivel de Criticidad", ["NORMAL", "MEDIA", "ALTA"])
+            inspector = st.text_input("Inspector Responsable *", placeholder="Nombre del Técnico")
+            foto = st.file_uploader("Adjuntar Fotografía de Terreno", type=["png", "jpg", "jpeg"])
+
+        diagnostico = st.text_area("Diagnóstico Técnico y Hallazgos *", placeholder="Describa el estado del equipo...")
+        recomendaciones = st.text_area("Recomendaciones / Acciones", placeholder="Acciones correctivas sugeridas...")
+
+        submitted = st.form_submit_button("💾 Guardar Reporte", use_container_width=True)
+        
+        if submitted:
+            if not ot or not cliente or not tag or not inspector or not diagnostico:
+                st.error("Por favor completa los campos obligatorios (*).")
+            else:
+                nuevo_folio = f"FLT-2026-{len(st.session_state.reports) + 1:03d}"
+                fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
+                
+                st.session_state.reports.insert(0, {
+                    "id": nuevo_folio,
+                    "ot": ot,
+                    "fecha": fecha_actual,
+                    "cliente": cliente,
+                    "faena": faena,
+                    "tag": tag,
+                    "tipo": tipo,
+                    "criticidad": criticidad,
+                    "inspector": inspector,
+                    "diagnostico": diagnostico,
+                    "recomendaciones": recomendaciones
+                })
+                st.success(f"¡Reporte {nuevo_folio} guardado con éxito!")
+                st.rerun()
+
+# --- BARRA LATERAL (CONTROLES) ---
+st.sidebar.title("⚙️ Fluitek Control")
+if st.sidebar.button("➕ Crear Nuevo Reporte / OT", use_container_width=True, type="primary"):
+    modal_nuevo_reporte()
+
+st.sidebar.markdown("---")
+st.sidebar.write(f"*Total de Reportes:* {len(st.session_state.reports)}")
+
+# --- CABECERA PRINCIPAL ---
+st.title("🛠️ Fluitek - Field & Technical Reports")
+st.caption("Gestión de Inspecciones, Fluidos & Monitoreo de Condición")
+
+# --- RESUMEN DE KPIS ---
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+total_rep = len(st.session_state.reports)
+altas = sum(1 for r in st.session_state.reports if r["criticidad"] == "ALTA")
+medias = sum(1 for r in st.session_state.reports if r["criticidad"] == "MEDIA")
+normales = sum(1 for r in st.session_state.reports if r["criticidad"] == "NORMAL")
+
+kpi1.metric("TOTAL REPORTES", total_rep)
+kpi2.metric("CRITICIDAD ALTA", altas, delta_color="inverse")
+kpi3.metric("EN ADVERTENCIA", medias, delta_color="off")
+kpi4.metric("CONDICIÓN NORMAL", normales)
+
+st.markdown("---")
+
+# --- TABLA DE REGISTROS ---
+st.subheader("📋 Histórico de Reportes de Campo")
+
+if len(st.session_state.reports) > 0:
+    df = pd.DataFrame(st.session_state.reports)
+    st.dataframe(
+        df[["id", "ot", "fecha", "cliente", "faena", "tag", "tipo", "criticidad", "inspector"]],
+        use_container_width=True,
+        hide_index=True
+    )
+else:
+    st.info("No hay reportes registrados aún. Haz clic en 'Crear Nuevo Reporte / OT' en la barra lateral.")
