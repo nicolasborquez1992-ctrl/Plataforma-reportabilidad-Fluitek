@@ -1,429 +1,559 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import sqlite3
-import hashlib
-from datetime import datetime
 import json
+from datetime import datetime
+import streamlit.components.v1 as components
 
 # ==========================================
-# 1. CONFIGURACIÓN INICIAL DE LA PÁGINA
+# 1. PAGE CONFIGURATION & STYLING
 # ==========================================
 st.set_page_config(
-    page_title="Fluitek - Platform & Technical Reports",
+    page_title="Fluitek - OT & Field GPS Platform",
     page_icon="⚙️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS personalizados
+# Fluitek Brand CSS Styling
 st.markdown("""
 <style>
-    .fluitek-badge {
-        background-color: #000000;
-        color: #ffffff;
-        font-weight: 900;
-        padding: 4px 12px;
-        border-radius: 4px;
-        letter-spacing: 1px;
+    /* Fluitek Industrial Dark Theme Overrides */
+    .main {
+        background-color: #0b0f19;
     }
     .stMetric {
-        background-color: #ffffff;
+        background-color: #161f33;
         padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #2a3859;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    .stMetric label {
+        color: #94a3b8 !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+    }
+    .stMetric .number {
+        color: #38bdf8 !important;
+        font-weight: 700 !important;
+    }
+    .ot-card {
+        background-color: #161f33;
+        border: 1px solid #2a3859;
+        border-left: 5px solid #0284c7;
+        padding: 16px;
         border-radius: 10px;
-        border-left: 5px solid #0f172a;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 12px;
+    }
+    .badge-pending {
+        background-color: #f59e0b22;
+        color: #f59e0b;
+        border: 1px solid #f59e0b55;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .badge-in-progress {
+        background-color: #0284c722;
+        color: #38bdf8;
+        border: 1px solid #0284c755;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .badge-completed {
+        background-color: #10b98122;
+        color: #34d399;
+        border: 1px solid #10b98155;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .badge-high {
+        background-color: #ef444422;
+        color: #f87171;
+        border: 1px solid #ef444455;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. MOTOR DE BASE DE DATOS (SQLite)
-# ==========================================
-DB_FILE = "fluitek_reports.db"
 
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
+# ==========================================
+# 2. INITIALIZE SESSION STATE DATA
+# ==========================================
+if 'work_orders' not in st.session_state:
+    st.session_state.work_orders = [
+        {
+            "ot_number": "OT-2026-0891",
+            "client": "Minera Doña Inés",
+            "facility": "Planta Concentradora Norte",
+            "equipment": "Filtro Prensa FP-402",
+            "service_type": "Mantenimiento Preventivo",
+            "technician": "Carlos Mendoza",
+            "priority": "Alta",
+            "status": "En Proceso",
+            "lat": -23.6509,
+            "lng": -70.3975,
+            "accuracy": "8m",
+            "created_at": "2026-09-05 08:30",
+            "description": "Cambio preventivo de placas de filtración y calibración de unidad hidráulica."
+        },
+        {
+            "ot_number": "OT-2026-0892",
+            "client": "Celulosa Arauco",
+            "facility": "Planta Valdivia",
+            "equipment": "Bomba Depuradora BD-12",
+            "service_type": "Reparación Mecánica",
+            "technician": "Andrea Torres",
+            "priority": "Urgente",
+            "status": "Pendiente",
+            "lat": -39.8142,
+            "lng": -73.2459,
+            "accuracy": "12m",
+            "created_at": "2026-09-05 10:15",
+            "description": "Fuga de fluido hidráulico en prensa principal. Requiere recambio de sellos."
+        },
+        {
+            "ot_number": "OT-2026-0893",
+            "client": "Empresa Portuaria Bío Bío",
+            "facility": "Terminal 2",
+            "equipment": "Sistema Filtración Aire SF-01",
+            "service_type": "Inspección Técnica",
+            "technician": "Roberto Silva",
+            "priority": "Normal",
+            "status": "Completada",
+            "lat": -36.7167,
+            "lng": -73.1167,
+            "accuracy": "5m",
+            "created_at": "2026-09-04 14:00",
+            "description": "Inspección de rutina de cartuchos de filtración y toma de muestras de aceite."
+        }
+    ]
+
+if 'last_captured_gps' not in st.session_state:
+    st.session_state.last_captured_gps = {
+        "lat": -33.4489,
+        "lng": -70.6693,
+        "accuracy": "No capturado"
+    }
+
+
+# ==========================================
+# 3. HEADER & SIDEBAR NAVIGATION
+# ==========================================
+st.title("⚙️ Fluitek — Gestión de Ordenes de Trabajo (OT)")
+st.caption("Plataforma Integrada de Servicios en Terreno y Captura GPS en Tiempo Real")
+
+st.sidebar.image("https://img.icons8.com/color/96/worker-with-roadblock.png", width=70)
+st.sidebar.title("Fluitek Field Operations")
+st.sidebar.markdown("---")
+
+menu = st.sidebar.radio(
+    "Navegación / Módulos",
+    [
+        "📊 Dashboard General",
+        "🛰️ Captura GPS en Terreno",
+        "➕ Crear Nueva Orden (OT)",
+        "📋 Lista y Control de OTs",
+        "🗺️ Mapa General de Terreno"
+    ]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.info(
+    "*Estado del Sistema:*\n\n"
+    "• Modulo GPS: *Activo* (HTML5 Geolocation)\n"
+    "• Conexión: *En Línea*\n"
+    f"• OTs Registradas: *{len(st.session_state.work_orders)}*"
+)
+
+
+# ==========================================
+# 4. MODULE 1: DASHBOARD GENERAL
+# ==========================================
+if menu == "📊 Dashboard General":
+    st.subheader("Resumen Operativo de Terreno")
     
-    # Tabla Usuarios
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            nombre TEXT NOT NULL,
-            rol TEXT NOT NULL -- Admin, Técnico, Cliente
-        )
-    ''')
+    total_ots = len(st.session_state.work_orders)
+    pending = len([o for o in st.session_state.work_orders if o['status'] == 'Pendiente'])
+    in_progress = len([o for o in st.session_state.work_orders if o['status'] == 'En Proceso'])
+    completed = len([o for o in st.session_state.work_orders if o['status'] == 'Completada'])
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total de Ordenes (OT)", total_ots)
+    col2.metric("En Proceso", in_progress, delta="Activas")
+    col3.metric("Pendientes", pending, delta_color="inverse")
+    col4.metric("Completadas", completed, delta="Finalizadas")
+
+    st.markdown("### ⚡ Órdenes Prioritarias y Recientes")
     
-    # Tabla Reportes / Ordenes de Trabajo
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS reportes (
-            id TEXT PRIMARY KEY,
-            ot TEXT NOT NULL,
-            cliente TEXT NOT NULL,
-            faena TEXT NOT NULL,
-            tag TEXT NOT NULL,
-            tipo_servicio TEXT NOT NULL,
-            criticidad TEXT NOT NULL,
-            estado_seguimiento TEXT NOT NULL, -- Borrador, Pendiente, En Ejecucion, Cerrado
-            inspector TEXT NOT NULL,
-            lat REAL,
-            lng REAL,
-            temperatura REAL,
-            presion REAL,
-            iso_code TEXT,
-            diagnostico TEXT,
-            recomendaciones TEXT,
-            fecha_creacion TEXT NOT NULL
+    df_ots = pd.DataFrame(st.session_state.work_orders)
+    if not df_ots.empty:
+        st.dataframe(
+            df_ots[['ot_number', 'client', 'facility', 'equipment', 'technician', 'priority', 'status', 'created_at']],
+            use_container_width=True,
+            hide_index=True
         )
-    ''')
-    
-    # Tabla Historial de Cambios (Audit Log)
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS historial (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            reporte_id TEXT NOT NULL,
-            usuario TEXT NOT NULL,
-            accion TEXT NOT NULL,
-            detalles TEXT,
-            fecha TEXT NOT NULL,
-            FOREIGN KEY(reporte_id) REFERENCES reportes(id)
-        )
-    ''')
-
-    # Crear usuario Admin inicial por defecto (admin / admin123)
-    c.execute("SELECT COUNT(*) FROM usuarios")
-    if c.fetchone()[0] == 0:
-        pass_hash = hashlib.sha256("admin123".encode()).hexdigest()
-        c.execute("INSERT INTO usuarios (username, password, nombre, rol) VALUES (?, ?, ?, ?)",
-                  ("admin", pass_hash, "Administrador Fluitek", "Admin"))
-        
-        pass_tec = hashlib.sha256("tec123".encode()).hexdigest()
-        c.execute("INSERT INTO usuarios (username, password, nombre, rol) VALUES (?, ?, ?, ?)",
-                  ("carlos.m", pass_tec, "Carlos Mendoza", "Técnico"))
-
-        pass_cli = hashlib.sha256("cli123".encode()).hexdigest()
-        c.execute("INSERT INTO usuarios (username, password, nombre, rol) VALUES (?, ?, ?, ?)",
-                  ("supervision", pass_cli, "Supervisión Minera", "Cliente"))
-
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# Funciones Auxiliares BD
-def hash_pass(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def validar_login(username, password):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT username, nombre, rol FROM usuarios WHERE username = ? AND password = ?", (username, hash_pass(password)))
-    user = c.fetchone()
-    conn.close()
-    return user
-
-def registrar_historial(reporte_id, usuario, accion, detalles=""):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("INSERT INTO historial (reporte_id, usuario, accion, detalles, fecha) VALUES (?, ?, ?, ?, ?)",
-              (reporte_id, usuario, accion, detalles, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-    conn.commit()
-    conn.close()
 
 # ==========================================
-# 3. AUTENTICACIÓN Y MANEJO DE SESIÓN
+# 5. MODULE 2: CAPTURA GPS EN TERRENO (EMBEDDED HTML/JS)
 # ==========================================
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-if 'user_info' not in st.session_state:
-    st.session_state['user_info'] = None
+elif menu == "🛰️ Captura GPS en Terreno":
+    st.subheader("🛰️ Captura de Geolocalización GPS del Técnico")
+    st.markdown("""
+    Utiliza el chip GPS de tu dispositivo o navegador para obtener las coordenadas exactas 
+    de tu ubicación en terreno e inspección de equipos Fluitek.
+    """)
 
-def login_form():
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
-        st.markdown("""
-        <div style="text-align: center; margin-bottom: 20px;">
-            <span class="fluitek-badge" style="font-size: 28px;">FLUITEK</span>
-            <p style="color: #64748b; margin-top: 10px;">Sistema Integral de Gestión & Monitoreo de Campo</p>
+    # Embedded HTML5/JS Geolocation Capture Component with Leaflet Map
+    gps_html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background-color: #0f172a;
+                color: #f8fafc;
+                margin: 0;
+                padding: 10px;
+            }
+            .gps-box {
+                background: #1e293b;
+                border: 1px solid #334155;
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 12px;
+            }
+            .btn-gps {
+                background: linear-gradient(135deg, #0284c7, #2563eb);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+                width: 100%;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            }
+            .btn-gps:hover {
+                background: linear-gradient(135deg, #0369a1, #1d4ed8);
+                transform: translateY(-1px);
+            }
+            .data-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+                margin-top: 15px;
+            }
+            .data-card {
+                background: #0f172a;
+                border: 1px solid #334155;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            .data-title {
+                font-size: 11px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .data-val {
+                font-size: 16px;
+                font-weight: bold;
+                color: #38bdf8;
+                margin-top: 4px;
+            }
+            #map {
+                height: 280px;
+                width: 100%;
+                border-radius: 10px;
+                margin-top: 15px;
+                border: 1px solid #334155;
+            }
+            .status-tag {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                margin-top: 8px;
+            }
+            .status-waiting { background: #334155; color: #cbd5e1; }
+            .status-active { background: #065f46; color: #34d399; }
+            .status-error { background: #991b1b; color: #fca5a5; }
+        </style>
+    </head>
+    <body>
+
+        <div class="gps-box">
+            <button class="btn-gps" onclick="getLocation()">
+                📍 Obtener Mi Ubicación GPS Actual
+            </button>
+            <div id="status-container">
+                <span id="status-badge" class="status-tag status-waiting">Esperando orden de captura...</span>
+            </div>
+
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-title">Latitud</div>
+                    <div class="data-val" id="lat-val">--.----</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-title">Longitud</div>
+                    <div class="data-val" id="lng-val">--.----</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-title">Precisión</div>
+                    <div class="data-val" id="acc-val">-- m</div>
+                </div>
+            </div>
+
+            <div id="map"></div>
         </div>
-        """, unsafe_allow_html=True)
-        
-        with st.form("form_login"):
-            st.subheader("🔐 Iniciar Sesión")
-            username = st.text_input("Usuario")
-            password = st.text_input("Contraseña", type="password")
-            submit = st.form_submit_button("Ingresar al Sistema", use_container_width=True)
+
+        <script>
+            var map = L.map('map').setView([-33.4489, -70.6693], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            var marker;
+
+            function getLocation() {
+                var badge = document.getElementById('status-badge');
+                badge.className = 'status-tag status-waiting';
+                badge.innerText = 'Capturando posición satellite/GPS...';
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(showPosition, showError, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                } else {
+                    badge.className = 'status-tag status-error';
+                    badge.innerText = 'Geolocalización no soportada en este navegador.';
+                }
+            }
+
+            function showPosition(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                var acc = Math.round(position.coords.accuracy);
+
+                document.getElementById('lat-val').innerText = lat.toFixed(5);
+                document.getElementById('lng-val').innerText = lng.toFixed(5);
+                document.getElementById('acc-val').innerText = '±' + acc + 'm';
+
+                var badge = document.getElementById('status-badge');
+                badge.className = 'status-tag status-active';
+                badge.innerText = '✅ Coordenadas Capturadas Exitosamente (' + new Date().toLocaleTimeString() + ')';
+
+                var newLatLng = new L.LatLng(lat, lng);
+                map.setView(newLatLng, 15);
+
+                if (marker) {
+                    marker.setLatLng(newLatLng);
+                } else {
+                    marker = L.marker(newLatLng).addTo(map);
+                }
+                marker.bindPopup("<b>Ubicación del Técnico</b><br>Lat: " + lat.toFixed(5) + "<br>Lng: " + lng.toFixed(5)).openPopup();
+            }
+
+            function showError(error) {
+                var badge = document.getElementById('status-badge');
+                badge.className = 'status-tag status-error';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        badge.innerText = "❌ El usuario denegó la solicitud de Geolocalización.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        badge.innerText = "❌ La información de ubicación no está disponible.";
+                        break;
+                    case error.TIMEOUT:
+                        badge.innerText = "❌ Se agotó el tiempo de espera para obtener la ubicación.";
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        badge.innerText = "❌ Error desconocido al obtener la posición.";
+                        break;
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+
+    components.html(gps_html_code, height=480)
+
+    st.markdown("### 📝 Ingresar Coordenadas a la Sesión Activa")
+    st.info("Copia las coordenadas capturadas arriba para asociarlas manualmente o usa los accesos directos de instalaciones Fluitek.")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        manual_lat = st.number_input("Latitud GPS", value=st.session_state.last_captured_gps['lat'], format="%.5f")
+    with col2:
+        manual_lng = st.number_input("Longitud GPS", value=st.session_state.last_captured_gps['lng'], format="%.5f")
+    with col3:
+        manual_acc = st.text_input("Precisión Estimada", value="±10m")
+
+    if st.button("💾 Guardar Coordenadas como Referencia para Nueva OT"):
+        st.session_state.last_captured_gps = {
+            "lat": manual_lat,
+            "lng": manual_lng,
+            "accuracy": manual_acc
+        }
+        st.success("¡Coordenadas guardadas temporalmente para el formulario de OT!")
+
+# ==========================================
+# 6. MODULE 3: CREAR NUEVA OT
+# ==========================================
+elif menu == "➕ Crear Nueva Orden (OT)":
+    st.subheader("➕ Registro de Nueva Orden de Trabajo (OT)")
+    st.markdown("Genera una nueva solicitud de servicio en terreno indicando cliente, equipo y geolocalización.")
+
+    with st.form("new_ot_form", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            ot_num = f"OT-2026-0{len(st.session_state.work_orders) + 894}"
+            st.text_input("Número de OT", value=ot_num, disabled=True)
+            client = st.text_input("Cliente / Empresa", placeholder="Ej: Minera Escondida")
+            facility = st.text_input("Planta / Instalación", placeholder="Ej: Nave de Molienda 3")
+            equipment = st.text_input("Tag o Nombre del Equipo", placeholder="Ej: Filtro Prensa FP-101")
             
-            if submit:
-                user = validar_login(username, password)
-                if user:
-                    st.session_state['logged_in'] = True
-                    st.session_state['user_info'] = {"username": user[0], "nombre": user[1], "rol": user[2]}
-                    st.success(f"Bienvenido, {user[1]}")
-                    st.rerun()
-                else:
-                    st.error("Usuario o contraseña incorrectos.")
-
-if not st.session_state['logged_in']:
-    login_form()
-    st.stop()
-
-# ==========================================
-# 4. BARRA LATERAL Y NAVEGACIÓN
-# ==========================================
-user = st.session_state['user_info']
-
-with st.sidebar:
-    st.markdown(f'<span class="fluitek-badge" style="font-size: 20px;">FLUITEK</span>', unsafe_allow_html=True)
-    st.markdown(f"**Usuario:** {user['nombre']}")
-    st.markdown(f"**Rol:** `{user['rol']}`")
-    st.divider()
-    
-    opciones_menu = ["📊 Dashboard Executivo", "📝 Nueva Orden / Reporte", "📋 Gestión de Reportes", "📜 Historial de Cambios"]
-    if user['rol'] == 'Admin':
-        opciones_menu.append("👥 Gestión de Usuarios")
-        
-    menu = st.radio("Navegación", opciones_menu)
-    
-    st.divider()
-    if st.button("🚪 Cerrar Sesión", use_container_width=True):
-        st.session_state['logged_in'] = False
-        st.session_state['user_info'] = None
-        st.rerun()
-
-# ==========================================
-# 5. MÓDULO: DASHBOARD CON GRÁFICOS
-# ==========================================
-if menu == "📊 Dashboard Executivo":
-    st.title("📊 Dashboard de Monitoreo & Operaciones")
-    
-    conn = sqlite3.connect(DB_FILE)
-    df_reportes = pd.read_sql_query("SELECT * FROM reportes", conn)
-    conn.close()
-    
-    if df_reportes.empty:
-        st.info("Aún no hay reportes registrados en la base de datos para generar el dashboard.")
-    else:
-        # Métricas KPI Principales
-        col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-        col_kpi1.metric("Total Ordenes / Reportes", len(df_reportes))
-        col_kpi2.metric("Alertas Críticas (Alta)", len(df_reportes[df_reportes['criticidad'] == 'ALTA']), delta_color="inverse")
-        col_kpi3.metric("En Seguimiento / Ejecución", len(df_reportes[df_reportes['estado_seguimiento'] == 'En Ejecución']))
-        col_kpi4.metric("Casos Cerrados", len(df_reportes[df_reportes['estado_seguimiento'] == 'Cerrado']))
-        
-        st.divider()
-        
-        col_chart1, col_chart2 = st.columns(2)
-        
-        with col_chart1:
-            st.subheader("Distribución por Nivel de Criticidad")
-            fig_crit = px.pie(
-                df_reportes, 
-                names='criticidad', 
-                color='criticidad',
-                color_discrete_map={'NORMAL': '#10b981', 'MEDIA': '#f59e0b', 'ALTA': '#ef4444'},
-                hole=0.4
+        with c2:
+            service_type = st.selectbox(
+                "Tipo de Servicio",
+                ["Mantenimiento Preventivo", "Mantenimiento Correctivo", "Reparación Mecánica", "Inspección Técnica", "Cambio de Cartuchos/Filtros", "Calibración"]
             )
-            st.plotly_chart(fig_crit, use_container_width=True)
-            
-        with col_chart2:
-            st.subheader("Estado de Seguimiento de Órdenes")
-            fig_estado = px.bar(
-                df_reportes, 
-                x='estado_seguimiento', 
-                color='estado_seguimiento',
-                labels={'estado_seguimiento': 'Estado', 'count': 'Cantidad'},
-                color_discrete_sequence=px.colors.qualitative.Dark24
-            )
-            st.plotly_chart(fig_estado, use_container_width=True)
-            
-        # Mapa de Ubicaciones GPS
-        df_gps = df_reportes.dropna(subset=['lat', 'lng'])
-        if not df_gps.empty:
-            st.subheader("🗺️ Geolocalización de Inspecciones en Campo")
-            fig_map = px.scatter_mapbox(
-                df_gps, 
-                lat="lat", 
-                lon="lng", 
-                hover_name="ot", 
-                hover_data=["cliente", "tag", "criticidad"],
-                color="criticidad",
-                color_discrete_map={'NORMAL': 'green', 'MEDIA': 'orange', 'ALTA': 'red'},
-                zoom=8, 
-                height=400
-            )
-            fig_map.update_layout(mapbox_style="open-street-map")
-            st.plotly_chart(fig_map, use_container_width=True)
+            technician = st.text_input("Nombre del Técnico Asignado", placeholder="Ej: Juan Pérez")
+            priority = st.select_slider("Prioridad del Trabajo", options=["Baja", "Normal", "Alta", "Urgente"], value="Normal")
+            status = st.selectbox("Estado Inicial", ["Pendiente", "En Proceso", "Completada"])
 
-# ==========================================
-# 6. MÓDULO: NUEVA ORDEN / REPORTE
-# ==========================================
-elif menu == "📝 Nueva Orden / Reporte":
-    st.title("📝 Registrar Orden de Trabajo / Campo")
-    
-    if user['rol'] == 'Cliente':
-        st.warning("⚠️ Su rol actual (Cliente) solo permite la lectura e inspección de reportes.")
-        st.stop()
+        st.markdown("#### 📍 Posición GPS de la Instalación/Equipo")
+        g1, g2, g3 = st.columns(3)
+        with g1:
+            lat = st.number_input("Latitud GPS", value=st.session_state.last_captured_gps['lat'], format="%.5f")
+        with g2:
+            lng = st.number_input("Longitud GPS", value=st.session_state.last_captured_gps['lng'], format="%.5f")
+        with g3:
+            acc = st.text_input("Precisión GPS", value=st.session_state.last_captured_gps['accuracy'])
 
-    with st.form("form_nuevo_reporte", clear_on_submit=True):
-        st.subheader("Datos de la Orden y Ubicación")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            ot = st.text_input("Orden de Trabajo (OT) *", placeholder="Ej: OT-9941")
-            cliente = st.text_input("Cliente *", placeholder="Ej: Minera Los Pelambres")
-        with col2:
-            faena = st.text_input("Faena / Planta *", placeholder="Ej: Concentradora")
-            tag = st.text_input("Tag del Equipo *", placeholder="Ej: RED-PARAMAX-9000")
-        with col3:
-            tipo_servicio = st.selectbox("Tipo de Servicio", [
-                "Monitoreo de Condición", 
-                "Análisis de Aceite / Fluidos", 
-                "Mantenimiento Hidráulico", 
-                "Inspección General"
-            ])
-            criticidad = st.selectbox("Criticidad Inicial", ["NORMAL", "MEDIA", "ALTA"])
+        description = st.text_area("Descripción Detallada del Servicio", placeholder="Detalla las actividades a realizar o diagnóstico preliminar...")
 
-        st.subheader("📍 Captura GPS & Parámetros Operativos")
-        col_gps1, col_gps2, col_p1, col_p2, col_p3 = st.columns(5)
-        with col_gps1:
-            lat = st.number_input("Latitud GPS", value=-30.015300, format="%.6f")
-        with col_gps2:
-            lng = st.number_input("Longitud GPS", value=-71.393200, format="%.6f")
-        with col_p1:
-            temp = st.number_input("Temp (°C)", value=55.0)
-        with col_p2:
-            presion = st.number_input("Presión (PSI)", value=1500.0)
-        with col_p3:
-            iso_code = st.text_input("Código ISO 4406", value="18/16/13")
+        submitted = st.form_submit_button("🚀 Crear y Publicar Orden de Trabajo")
 
-        st.subheader("📋 Diagnóstico y Fotografía")
-        diagnostico = st.text_area("Diagnóstico Técnico y Hallazgos")
-        recomendaciones = st.text_area("Recomendaciones de Acción")
-        
-        fotos = st.file_uploader("Adjuntar Fotografías / Evidencias", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
-
-        btn_guardar = st.form_submit_button("💾 Guardar y Crear Orden de Trabajo", use_container_width=True)
-
-        if btn_guardar:
-            if not ot or not cliente or not tag:
-                st.error("Por favor complete los campos obligatorios (*)")
+        if submitted:
+            if not client or not equipment or not technician:
+                st.error("Por favor completa los campos obligatorios (Cliente, Equipo y Técnico).")
             else:
-                folio = f"FLT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                conn = sqlite3.connect(DB_FILE)
-                c = conn.cursor()
-                c.execute('''
-                    INSERT INTO reportes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (folio, ot, cliente, faena, tag, tipo_servicio, criticidad, "Pendiente", user['nombre'],
-                      lat, lng, temp, presion, iso_code, diagnostico, recomendaciones, datetime.now().strftime("%Y-%m-%d %H:%M")))
-                conn.commit()
-                conn.close()
-
-                registrar_historial(folio, user['username'], "Creación", f"Creación de Orden de Trabajo {ot}")
-                st.success(f"Reporte/OT guardado con éxito con el Folio: **{folio}**")
+                new_ot = {
+                    "ot_number": ot_num,
+                    "client": client,
+                    "facility": facility if facility else "Sede Principal",
+                    "equipment": equipment,
+                    "service_type": service_type,
+                    "technician": technician,
+                    "priority": priority,
+                    "status": status,
+                    "lat": lat,
+                    "lng": lng,
+                    "accuracy": acc,
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "description": description if description else "Sin descripción adicional."
+                }
+                st.session_state.work_orders.insert(0, new_ot)
+                st.success(f"¡Orden de Trabajo *{ot_num}* registrada correctamente!")
 
 # ==========================================
-# 7. MÓDULO: GESTIÓN Y ESTADOS DE SEGUIMIENTO
+# 7. MODULE 4: LISTA Y CONTROL DE OTS
 # ==========================================
-elif menu == "📋 Gestión de Reportes":
-    st.title("📋 Gestión y Seguimiento de Reportes")
-    
-    conn = sqlite3.connect(DB_FILE)
-    df_reportes = pd.read_sql_query("SELECT * FROM reportes ORDER BY fecha_creacion DESC", conn)
-    conn.close()
+elif menu == "📋 Lista y Control de OTs":
+    st.subheader("📋 Control de Ordenes de Trabajo Registradas")
 
-    if df_reportes.empty:
-        st.info("No hay reportes guardados.")
-    else:
-        # Filtros
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            filtro_estado = st.multiselect("Filtrar por Estado", df_reportes['estado_seguimiento'].unique(), default=df_reportes['estado_seguimiento'].unique())
-        with col_f2:
-            filtro_crit = st.multiselect("Filtrar por Criticidad", df_reportes['criticidad'].unique(), default=df_reportes['criticidad'].unique())
+    # Filters
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        filter_status = st.multiselect("Filtrar por Estado", ["Pendiente", "En Proceso", "Completada"], default=["Pendiente", "En Proceso", "Completada"])
+    with col_f2:
+        filter_priority = st.multiselect("Filtrar por Prioridad", ["Baja", "Normal", "Alta", "Urgente"], default=["Baja", "Normal", "Alta", "Urgente"])
+    with col_f3:
+        search_query = st.text_input("🔍 Buscar (Cliente/OT/Equipo)", "")
 
-        df_filtrado = df_reportes[
-            (df_reportes['estado_seguimiento'].isin(filtro_estado)) & 
-            (df_reportes['criticidad'].isin(filtro_crit))
-        ]
+    # Apply filters
+    filtered_ots = [
+        o for o in st.session_state.work_orders
+        if o['status'] in filter_status
+        and o['priority'] in filter_priority
+        and (
+            search_query.lower() in o['ot_number'].lower()
+            or search_query.lower() in o['client'].lower()
+            or search_query.lower() in o['equipment'].lower()
+            or search_query.lower() in o['technician'].lower()
+        )
+    ]
 
-        st.dataframe(df_filtrado[['id', 'ot', 'cliente', 'tag', 'tipo_servicio', 'criticidad', 'estado_seguimiento', 'inspector', 'fecha_creacion']], use_container_width=True)
+    st.markdown(f"*Mostrando {len(filtered_ots)} de {len(st.session_state.work_orders)} OTs*")
 
-        st.divider()
-        st.subheader("🔄 Actualizar Estado de Seguimiento")
-        
-        col_sel, col_est, col_btn = st.columns([2, 2, 1])
-        with col_sel:
-            reporte_sel = st.selectbox("Seleccionar Folio / OT para actualizar", df_filtrado['id'].tolist())
-        with col_est:
-            nuevo_estado = st.selectbox("Nuevo Estado", ["Borrador", "Pendiente", "En Ejecución", "Cerrado / Aprobado"])
-        with col_btn:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("Actualizar", use_container_width=True):
-                if user['rol'] == 'Cliente' and nuevo_estado == "Cerrado / Aprobado":
-                    st.error("Los clientes solo pueden visualizar el estado.")
-                else:
-                    conn = sqlite3.connect(DB_FILE)
-                    c = conn.cursor()
-                    c.execute("UPDATE reportes SET estado_seguimiento = ? WHERE id = ?", (nuevo_estado, reporte_sel))
-                    conn.commit()
-                    conn.close()
-                    
-                    registrar_historial(reporte_sel, user['username'], "Cambio de Estado", f"Estado cambiado a: {nuevo_estado}")
-                    st.success("Estado actualizado con éxito.")
+    for i, ot in enumerate(filtered_ots):
+        badge_class = (
+            "badge-completed" if ot['status'] == "Completada"
+            else "badge-in-progress" if ot['status'] == "En Proceso"
+            else "badge-pending"
+        )
+        prio_badge = "badge-high" if ot['priority'] in ["Alta", "Urgente"] else ""
+
+        with st.expander(f"{ot['ot_number']} — {ot['client']} ({ot['equipment']})", expanded=(i==0)):
+            st.markdown(f"""
+            <div class="ot-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 1.1rem; font-weight: bold; color: #38bdf8;">{ot['ot_number']}</span>
+                    <div>
+                        <span class="{badge_class}">{ot['status']}</span>
+                        <span class="{prio_badge}">{ot['priority']}</span>
+                    </div>
+                </div>
+                <p style="margin: 4px 0; color: #e2e8f0;"><strong>Cliente:</strong> {ot['client']} | <strong>Instalación:</strong> {ot['facility']}</p>
+                <p style="margin: 4px 0; color: #e2e8f0;"><strong>Equipo:</strong> {ot['equipment']} | <strong>Servicio:</strong> {ot['service_type']}</p>
+                <p style="margin: 4px 0; color: #94a3b8;"><strong>Técnico Asignado:</strong> {ot['technician']} | <strong>Fecha:</strong> {ot['created_at']}</p>
+                <p style="margin: 4px 0; color: #34d399;"><strong>📍 Ubicación GPS:</strong> Lat {ot['lat']:.5f}, Lng {ot['lng']:.5f} (Precisión: {ot['accuracy']})</p>
+                <div style="background-color: #0f172a; padding: 10px; border-radius: 6px; margin-top: 8px; color: #cbd5e1; font-size: 0.9rem;">
+                    {ot['description']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Action to change status
+            c_s1, c_s2 = st.columns([2, 1])
+            with c_s1:
+                new_st = st.selectbox(f"Actualizar Estado de {ot['ot_number']}", ["Pendiente", "En Proceso", "Completada"], index=["Pendiente", "En Proceso", "Completada"].index(ot['status']), key=f"sel_{ot['ot_number']}")
+            with c_s2:
+                st.write("")
+                st.write("")
+                if st.button("Guardar Estado", key=f"btn_{ot['ot_number']}"):
+                    ot['status'] = new_st
+                    st.success(f"Estado de {ot['ot_number']} actualizado a '{new_st}'")
                     st.rerun()
 
-# ==========================================
-# 8. MÓDULO: HISTORIAL DE CAMBIOS (AUDIT)
-# ==========================================
-elif menu == "📜 Historial de Cambios":
-    st.title("📜 Trazabilidad e Historial de Cambios")
-    
-    conn = sqlite3.connect(DB_FILE)
-    df_hist = pd.read_sql_query("SELECT * FROM historial ORDER BY fecha DESC", conn)
-    conn.close()
-    
-    if df_hist.empty:
-        st.info("Sin registros de cambios aún.")
-    else:
-        st.dataframe(df_hist, use_container_width=True)
-
-# ==========================================
-# 9. MÓDULO: GESTIÓN DE USUARIOS (ADMIN)
-# ==========================================
-elif menu == "👥 Gestión de Usuarios":
-    st.title("👥 Control de Usuarios y Roles")
-    
-    with st.form("form_usuario"):
-        st.subheader("Crear Nuevo Usuario")
-        new_user = st.text_input("Nombre de Usuario")
-        new_pass = st.text_input("Contraseña", type="password")
-        new_nombre = st.text_input("Nombre Completo")
-        new_rol = st.selectbox("Rol de Acceso", ["Técnico", "Cliente", "Admin"])
-        
-        btn_crear = st.form_submit_button("Crear Usuario")
-        if btn_crear:
-            if new_user and new_pass:
-                try:
-                    conn = sqlite3.connect(DB_FILE)
-                    c = conn.cursor()
-                    c.execute("INSERT INTO usuarios (username, password, nombre, rol) VALUES (?, ?, ?, ?)",
-                              (new_user, hash_pass(new_pass), new_nombre, new_rol))
-                    conn.commit()
-                    conn.close()
-                    st.success("Usuario registrado con éxito.")
-                except sqlite3.IntegrityError:
-                    st.error("El nombre de usuario ya existe.")
-            else:
-                st.error("Complete todos los campos.")
-
-    st.divider()
-    conn = sqlite3.connect(DB_FILE)
-    df_users = pd.read_sql_query("SELECT id, username, nombre, rol FROM usuarios", conn)
-    conn.close()
-    st.subheader("Usuarios Registrados")
-    st.table(df_users)
+    # Export options
+    st.markdown("---")
+    st.markdown("### 📥 Exportar Datos")
+    df_export = pd.DataFrame(st.session_state.work_orders)
+    csv_data = df_export.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="⬇️ Descargar Reporte de OTs en CSV",
+        data=csv_data,
+        file_name=f"fluitek_ots_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv"
