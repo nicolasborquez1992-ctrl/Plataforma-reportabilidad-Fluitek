@@ -1,711 +1,288 @@
 import streamlit as st
-import streamlit.components.v1 as components
+import pandas as pd
+import os
+from datetime import datetime
+from PIL import Image
+import io
 
-# Configuración de la página en Streamlit
+# -----------------------------------------------------------------------------
+# 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS
+# -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Fluitek - Reportes Técnicos",
-    page_icon="⚙️",
+    page_title="App de Reportes de Inspección",
+    page_icon="📱",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
-fluitek_app_html = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluitek - Sistema de Reportes Técnicos y Monitoreo</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        fluitek: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            700: '#075985',
-                            800: '#0c4a6e',
-                            900: '#0a3651',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+# Estilos CSS personalizados para apariencia de App Móvil / Dashboard
+st.markdown("""
     <style>
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white; color: black; }
-            .print-card { border: 1px solid #ccc; box-shadow: none !important; }
-        }
-        .print-only { display: none; }
+    /* Estilizar contenedor principal */
+    .main .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
+    }
+    /* Tarjetas personalizadas */
+    .card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 5px solid #007bff;
+    }
+    /* Botones principales */
+    .stButton>button {
+        border-radius: 8px;
+        font-weight: bold;
+    }
     </style>
-</head>
-<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
+""", unsafe_allow_html=True)
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-fluitek-900 text-white shadow-lg no-print sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="bg-fluitek-500 text-white font-black text-xl px-3 py-1 rounded shadow tracking-wider">
-                    FLUITEK
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold leading-tight">Field & Technical Reports</h1>
-                    <p class="text-xs text-slate-300">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-3">
-                <button onclick="openNewReportModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center shadow">
-                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte
-                </button>
-                <button onclick="exportDataCSV()" class="bg-fluitek-700 hover:bg-fluitek-600 text-white px-3 py-2 rounded-lg text-sm transition flex items-center">
-                    <i class="fa-solid fa-file-excel mr-2"></i> CSV
-                </button>
-            </div>
-        </div>
-    </header>
+DATA_FILE = "reportes.csv"
+IMAGE_DIR = "uploaded_images"
 
-    <!-- Main Content Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+if not os.path.exists(IMAGE_DIR):
+    os.makedirs(IMAGE_DIR)
 
-        <!-- KPI Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-fluitek-600 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Total Reportes</p>
-                    <h3 id="kpi-total" class="text-2xl font-bold text-slate-800">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-fluitek-100 text-fluitek-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </div>
-            </div>
+# -----------------------------------------------------------------------------
+# 2. FUNCIONES DE MANEJO DE DATOS E IMÁGENES
+# -----------------------------------------------------------------------------
+def cargar_reportes():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    else:
+        return pd.DataFrame(columns=[
+            "ID", "Fecha", "Título", "Categoría", "Área_Ubicación", 
+            "Prioridad", "Estado", "Inspector", "Descripción", "Ruta_Foto"
+        ])
 
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Criticidad Alta / Alarma</p>
-                    <h3 id="kpi-critical" class="text-2xl font-bold text-red-600">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-            </div>
+def guardar_reportes_df(df):
+    df.to_csv(DATA_FILE, index=False)
 
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">En Advertencia</p>
-                    <h3 id="kpi-warning" class="text-2xl font-bold text-amber-600">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                </div>
-            </div>
+def guardar_nuevo_reporte(nuevo_registro):
+    df = cargar_reportes()
+    df = pd.concat([df, pd.DataFrame([nuevo_registro])], ignore_index=True)
+    guardar_reportes_df(df)
 
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Condición Normal</p>
-                    <h3 id="kpi-normal" class="text-2xl font-bold text-emerald-600">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-            </div>
-        </div>
+def optimizar_y_guardar_imagen(imagen_bytes, nombre_base):
+    """Redimensiona y comprime la imagen para optimizar espacio"""
+    try:
+        img = Image.open(imagen_bytes)
+        # Convertir a RGB si viene en RGBA/PNG
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
+        # Redimensionar si supera ancho máximo de 1200px
+        max_size = (1200, 1200)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        nombre_archivo = f"foto_{timestamp}_{nombre_base}.jpg"
+        ruta_completa = os.path.join(IMAGE_DIR, nombre_archivo)
+        
+        # Guardar comprimida al 80% de calidad
+        img.save(ruta_completa, "JPEG", optimize=True, quality=80)
+        return ruta_completa
+    except Exception as e:
+        st.error(f"Error al procesar la imagen: {e}")
+        return ""
 
-        <!-- Filter & Search Controls -->
-        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
-            <div class="flex flex-1 gap-3 w-full md:w-auto">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por Cliente, Tag de Equipo, Técnico..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                </div>
-                <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                    <option value="ALL">Todas las Criticidades</option>
-                    <option value="ALTA">Alta / Alarma</option>
-                    <option value="MEDIA">Advertencia</option>
-                    <option value="NORMAL">Normal</option>
-                </select>
-                <select id="filterType" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                    <option value="ALL">Todos los Tipos</option>
-                    <option value="Monitoreo de Condición">Monitoreo de Condición</option>
-                    <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
-                    <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
-                    <option value="Inspección General">Inspección General</option>
-                </select>
-            </div>
-            <button onclick="loadSampleData()" class="text-xs text-fluitek-600 hover:text-fluitek-800 underline font-medium">
-                <i class="fa-solid fa-rotate-left mr-1"></i> Cargar Datos de Ejemplo
-            </button>
-        </div>
+# -----------------------------------------------------------------------------
+# 3. BARRA LATERAL (MENÚ DE NAVEGACIÓN)
+# -----------------------------------------------------------------------------
+st.sidebar.title("📱 Menú Principal")
+opcion = st.sidebar.radio(
+    "Seleccione una sección:",
+    ["➕ Nuevo Reporte", "📋 Ver / Gestionar Reportes", "📊 Estadísticas"]
+)
 
-        <!-- Reports Table View -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden no-print">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b">
-                            <th class="p-4">Folio / Fecha</th>
-                            <th class="p-4">Cliente / Faena</th>
-                            <th class="p-4">Equipo / Tag</th>
-                            <th class="p-4">Tipo de Servicio</th>
-                            <th class="p-4">Criticidad</th>
-                            <th class="p-4">Inspector</th>
-                            <th class="p-4 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reportsTableBody" class="divide-y text-sm">
-                        <!-- Dynamic Rows -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyState" class="p-8 text-center text-slate-500 hidden">
-                <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
-                <p>No se encontraron reportes con los filtros seleccionados.</p>
-            </div>
-        </div>
+st.sidebar.markdown("---")
+st.sidebar.caption("⚡ *Sistema de Inspección Móvil v2.0*")
 
-        <!-- Printable Official Report View -->
-        <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
-            <div class="flex justify-between items-start border-b pb-4 mb-6">
-                <div>
-                    <div class="text-2xl font-black text-fluitek-800 tracking-wider">FLUITEK CHILE</div>
-                    <p class="text-xs text-slate-500">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
-                </div>
-                <div class="text-right">
-                    <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
-                    <p id="previewFecha" class="text-xs text-slate-500">Fecha: 06/09/2026</p>
-                </div>
-            </div>
+# -----------------------------------------------------------------------------
+# 4. MÓDULO 1: NUEVO REPORTE
+# -----------------------------------------------------------------------------
+if opcion == "➕ Nuevo Reporte":
+    st.header("📝 Registrar Nuevo Reporte")
+    st.write("Complete la información solicitada y adjunte o tome la fotografía de evidencia.")
 
-            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg mb-6 border text-xs">
-                <div>
-                    <p><strong class="text-slate-700">Cliente:</strong> <span id="previewCliente">-</span></p>
-                    <p><strong class="text-slate-700">Faena / Planta:</strong> <span id="previewFaena">-</span></p>
-                    <p><strong class="text-slate-700">Ubicación GPS:</strong> <span id="previewGPS">-</span></p>
-                </div>
-                <div>
-                    <p><strong class="text-slate-700">Equipo / Tag:</strong> <span id="previewTag">-</span></p>
-                    <p><strong class="text-slate-700">Tipo Servicio:</strong> <span id="previewTipo">-</span></p>
-                    <p><strong class="text-slate-700">Inspector Fluitek:</strong> <span id="previewInspector">-</span></p>
-                </div>
-            </div>
+    with st.form(key="form_nuevo_reporte", clear_on_submit=True):
+        col1, col2 = st.columns(2)
 
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">ESTADO & CRITICIDAD DEL EQUIPO</h4>
-                <div id="previewBadgeCriticidad" class="inline-block px-4 py-2 rounded font-bold text-sm mb-2">
-                    CRITICIDAD ALTA
-                </div>
-                <div class="grid grid-cols-3 gap-4 text-xs bg-slate-100 p-3 rounded mt-2">
-                    <div><strong>Temp. Operación:</strong> <span id="previewTemp">-</span> °C</div>
-                    <div><strong>Presión / Flujo:</strong> <span id="previewPresion">-</span> PSI</div>
-                    <div><strong>Nivel ISO Contaminación:</strong> <span id="previewISO">-</span></div>
-                </div>
-            </div>
+        with col1:
+            titulo = st.text_input("Título del Reporte *", placeholder="Ej: Anomalía en Reductor Paramax")
+            categoria = st.selectbox(
+                "Categoría / Clasificación *",
+                ["Inspección Visual", "Mantenimiento Correctivo", "Falla Mecánica", "Fuga de Aceite / Fluido", "Seguridad / HSE", "Otro"]
+            )
+            area_ubicacion = st.text_input("Área / Ubicación del Equipo *", placeholder="Ej: Planta de Chancado - Cinta 3")
 
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">DIAGNÓSTICO TÉCNICO & HALLAZGOS</h4>
-                <p id="previewDiagnostico" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 p-3 rounded border">
-                    Sin observaciones registrados.
-                </p>
-            </div>
+        with col2:
+            prioridad = st.selectbox("Nivel de Prioridad", ["Baja", "Media", "Alta", "Crítica"])
+            inspector = st.text_input("Nombre del Inspector / Operador *", placeholder="Ej: Juan Pérez")
+            fecha_reporte = st.date_input("Fecha del Hallazgo", value=datetime.today())
 
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">RECOMENDACIONES DE ACCIÓN</h4>
-                <p id="previewRecomendaciones" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-amber-50/50 p-3 rounded border border-amber-200">
-                    Sin recomendaciones.
-                </p>
-            </div>
+        descripcion = st.text_area("Descripción detallada del problema / observación *", rows=3, placeholder="Detalle las condiciones detectadas...")
 
-            <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t text-center text-xs">
-                <div>
-                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Firma Inspector</div>
-                    <p class="font-bold" id="previewFirmaTecnico">Técnico Fluitek</p>
-                    <p class="text-slate-500">Especialista en Monitoreo de Condición</p>
-                </div>
-                <div>
-                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Aprobación Cliente</div>
-                    <p class="font-bold">Recepción Cliente / Supervisión</p>
-                    <p class="text-slate-500">Conforme / Notificado</p>
-                </div>
-            </div>
+        st.subheader("📸 Evidencia Fotográfica")
+        st.write("Elija cómo desea adjuntar la imagen:")
 
-            <div class="mt-8 flex justify-end gap-3 no-print">
-                <button onclick="closePreview()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">
-                    Cerrar Vista Previa
-                </button>
-                <button onclick="window.print()" class="px-4 py-2 bg-fluitek-600 text-white rounded-lg text-xs font-semibold hover:bg-fluitek-700 flex items-center">
-                    <i class="fa-solid fa-print mr-2"></i> Imprimir / Exportar PDF
-                </button>
-            </div>
-        </div>
+        tab_camara, tab_archivo = st.tabs(["📷 Tomar Foto con Cámara", "📁 Subir de la Galería"])
 
-    </main>
+        foto_camara = None
+        foto_archivo = None
 
-    <!-- Modal Form: Dynamic New/Edit Report -->
-    <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div class="bg-fluitek-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
-                <h3 class="font-bold text-lg flex items-center">
-                    <i class="fa-solid fa-file-signature text-amber-400 mr-2"></i> 
-                    <span id="modalTitle">Nuevo Reporte de Campo - Fluitek</span>
-                </h3>
-                <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
+        with tab_camara:
+            foto_camara = st.camera_input("Capturar foto directamente")
 
-            <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
-                <input type="hidden" id="reportId">
+        with tab_archivo:
+            foto_archivo = st.file_uploader("Seleccionar archivo de imagen", type=["jpg", "jpeg", "png"])
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
-                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Faena / Planta *</label>
-                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Equipo / Tag ID *</label>
-                        <input type="text" id="inputTag" required placeholder="Ej: RED-9000-A" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                    </div>
-                </div>
+        st.caption("* Campos obligatorios")
+        btn_guardar = st.form_submit_button("💾 Guardar y Enviar Reporte", use_container_width=True)
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Servicio</label>
-                        <select id="inputTipo" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                            <option value="Monitoreo de Condición">Monitoreo de Condición</option>
-                            <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
-                            <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
-                            <option value="Inspección General">Inspección General</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nivel de Criticidad</label>
-                        <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                            <option value="NORMAL" class="text-emerald-600 font-bold">🟢 Normal</option>
-                            <option value="MEDIA" class="text-amber-600 font-bold">🟡 Advertencia</option>
-                            <option value="ALTA" class="text-red-600 font-bold">🔴 Critica / Alarma</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Inspector responsable *</label>
-                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                    </div>
-                </div>
+        if btn_guardar:
+            if not titulo or not area_ubicacion or not inspector or not descripcion:
+                st.error("⚠️ Por favor, complete todos los campos obligatorios (*).")
+            else:
+                ruta_foto = ""
+                # Determinar qué origen de imagen se usó
+                imagen_para_guardar = foto_camara if foto_camara is not None else foto_archivo
 
-                <!-- Parameters Grid -->
-                <div class="bg-slate-50 p-3 rounded-lg border">
-                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-[11px] text-slate-500">Temp. (°C)</label>
-                            <input type="number" id="inputTemp" placeholder="65" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] text-slate-500">Presión (PSI)</label>
-                            <input type="number" id="inputPresion" placeholder="1800" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] text-slate-500">Código ISO 4406</label>
-                            <input type="text" id="inputISO" placeholder="18/16/13" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                    </div>
-                </div>
+                if imagen_para_guardar is not None:
+                    nombre_origen = "camara" if foto_camara is not None else "galeria"
+                    ruta_foto = optimizar_y_guardar_imagen(imagen_para_guardar, nombre_origen)
 
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-bold text-slate-700">Coordenadas / Ubicación GPS</label>
-                        <button type="button" onclick="getGPSLocation()" class="text-xs text-fluitek-600 hover:underline flex items-center">
-                            <i class="fa-solid fa-location-crosshairs mr-1"></i> Capturar GPS Actual
-                        </button>
-                    </div>
-                    <input type="text" id="inputGPS" placeholder="-27.5738, -70.7582" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
-                </div>
+                # Generar ID consecutivo
+                df_actual = cargar_reportes()
+                nuevo_id = f"REP-{(len(df_actual) + 1):04d}"
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
-                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-4 border-t">
-                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="px-5 py-2 bg-fluitek-600 text-white rounded-lg text-sm font-semibold hover:bg-fluitek-700 shadow flex items-center">
-                        <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Reporte
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- JavaScript Application Logic -->
-    <script>
-        let reports = [];
-
-        const sampleReports = [
-            {
-                id: "FLT-2026-001",
-                fecha: "2026-09-05 14:30",
-                cliente: "Minera Pelambres",
-                faena: "Planta Concentradora",
-                tag: "BOMBA-HYD-04",
-                tipo: "Monitoreo de Condición",
-                criticidad: "ALTA",
-                inspector: "Carlos Mendoza",
-                temp: 78,
-                presion: 2100,
-                iso: "21/19/16",
-                gps: "-31.8722, -70.5211",
-                diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
-                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
-            },
-            {
-                id: "FLT-2026-002",
-                fecha: "2026-09-06 09:15",
-                cliente: "Atacama Minerals",
-                faena: "Mina Subterránea",
-                tag: "RED-PARAMAX-9000",
-                tipo: "Análisis de Aceite / Fluidos",
-                criticidad: "MEDIA",
-                inspector: "Andrea Rojas",
-                temp: 62,
-                presion: 1450,
-                iso: "18/16/13",
-                gps: "-27.3667, -70.3333",
-                diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
-                recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
-            },
-            {
-                id: "FLT-2026-003",
-                fecha: "2026-09-06 11:00",
-                cliente: "Candelaria",
-                faena: "Área Chancado",
-                tag: "CH-01-LUB-02",
-                tipo: "Mantenimiento Hidráulico",
-                criticidad: "NORMAL",
-                inspector: "Carlos Mendoza",
-                temp: 45,
-                presion: 1200,
-                iso: "15/13/10",
-                gps: "-27.5738, -70.7582",
-                diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
-                recomendaciones: "Continuar con plan estándar de lubricación preventiva."
-            }
-        ];
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('fluitek_reports');
-            if (saved) {
-                try {
-                    reports = JSON.parse(saved);
-                } catch(e) {
-                    reports = sampleReports;
+                # Registro de datos
+                nuevo_registro = {
+                    "ID": nuevo_id,
+                    "Fecha": fecha_reporte.strftime("%Y-%m-%d"),
+                    "Título": titulo,
+                    "Categoría": categoria,
+                    "Área_Ubicación": area_ubicacion,
+                    "Prioridad": prioridad,
+                    "Estado": "Abierto",
+                    "Inspector": inspector,
+                    "Descripción": descripcion,
+                    "Ruta_Foto": ruta_foto
                 }
-            } else {
-                reports = sampleReports;
-                saveToStorage();
-            }
-            renderReports();
-        });
 
-        function saveToStorage() {
-            localStorage.setItem('fluitek_reports', JSON.stringify(reports));
-        }
+                guardar_nuevo_reporte(nuevo_registro)
+                st.success(f"✅ ¡Reporte **{nuevo_id}** guardado con éxito!")
+                st.balloons()
 
-        function loadSampleData() {
-            reports = [...sampleReports];
-            saveToStorage();
-            renderReports();
-        }
+# -----------------------------------------------------------------------------
+# 5. MÓDULO 2: GESTIÓN Y HISTORIAL DE REPORTES
+# -----------------------------------------------------------------------------
+elif opcion == "📋 Ver / Gestionar Reportes":
+    st.header("📋 Historial y Gestión de Reportes")
 
-        function renderReports() {
-            const tbody = document.getElementById('reportsTableBody');
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const severity = document.getElementById('filterSeverity').value;
-            const type = document.getElementById('filterType').value;
+    df_reportes = cargar_reportes()
 
-            tbody.innerHTML = '';
+    if df_reportes.empty:
+        st.info("Aún no existen reportes registrados.")
+    else:
+        # Filtros de búsqueda rápidos
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            filtro_cat = st.multiselect("Categoría:", options=df_reportes["Categoría"].unique(), default=df_reportes["Categoría"].unique())
+        with col_f2:
+            filtro_prio = st.multiselect("Prioridad:", options=df_reportes["Prioridad"].unique(), default=df_reportes["Prioridad"].unique())
+        with col_f3:
+            filtro_est = st.multiselect("Estado:", options=df_reportes["Estado"].unique(), default=df_reportes["Estado"].unique())
 
-            let filtered = reports.filter(r => {
-                const matchesSearch = r.cliente.toLowerCase().includes(search) || 
-                                     r.tag.toLowerCase().includes(search) || 
-                                     r.inspector.toLowerCase().includes(search) ||
-                                     r.id.toLowerCase().includes(search);
-                const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
-                const matchesType = (type === 'ALL') || (r.tipo === type);
-                return matchesSearch && matchesSeverity && matchesType;
-            });
+        # Aplicar Filtros
+        df_filtrado = df_reportes[
+            (df_reportes["Categoría"].isin(filtro_cat)) & 
+            (df_reportes["Prioridad"].isin(filtro_prio)) &
+            (df_reportes["Estado"].isin(filtro_est))
+        ]
 
-            document.getElementById('kpi-total').innerText = reports.length;
-            document.getElementById('kpi-critical').innerText = reports.filter(r => r.criticidad === 'ALTA').length;
-            document.getElementById('kpi-warning').innerText = reports.filter(r => r.criticidad === 'MEDIA').length;
-            document.getElementById('kpi-normal').innerText = reports.filter(r => r.criticidad === 'NORMAL').length;
+        # Botón para descargar datos en CSV
+        st.download_button(
+            label="📥 Descargar todos los reportes (CSV)",
+            data=df_filtrado.to_csv(index=False).encode("utf-8"),
+            file_name=f"reportes_inspeccion_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
 
-            if (filtered.length === 0) {
-                document.getElementById('emptyState').classList.remove('hidden');
-            } else {
-                document.getElementById('emptyState').classList.add('hidden');
+        st.dataframe(
+            df_filtrado[["ID", "Fecha", "Título", "Categoría", "Área_Ubicación", "Prioridad", "Estado", "Inspector"]],
+            use_container_width=True
+        )
+
+        st.markdown("---")
+        st.subheader("🔍 Detalle del Reporte y Actualización")
+
+        lista_ids = df_filtrado["ID"].tolist()
+        if lista_ids:
+            id_sel = st.selectbox("Seleccione el ID del reporte a inspeccionar:", lista_ids)
+            idx_reporte = df_reportes[df_reportes["ID"] == id_sel].index[0]
+            reporte = df_reportes.loc[idx_reporte]
+
+            col_det1, col_det2 = st.columns([2, 1])
+
+            with col_det1:
+                st.markdown(f"### {reporte['Título']} (`{reporte['ID']}`)")
+                st.write(f"📅 **Fecha:** {reporte['Fecha']} | 👤 **Inspector:** {reporte['Inspector']}")
+                st.write(f"📍 **Ubicación / Área:** {reporte['Área_Ubicación']}")
+                st.write(f"🏷️ **Categoría:** {reporte['Categoría']} | 🚨 **Prioridad:** {reporte['Prioridad']}")
                 
-                filtered.forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50 transition border-b";
+                st.write("**📝 Descripción del Hallazgo:**")
+                st.info(reporte['Descripción'])
 
-                    let badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
-                    let badgeIcon = "fa-circle-check";
-                    if (r.criticidad === 'ALTA') {
-                        badgeClass = "bg-red-100 text-red-800 border-red-300";
-                        badgeIcon = "fa-triangle-exclamation";
-                    } else if (r.criticidad === 'MEDIA') {
-                        badgeClass = "bg-amber-100 text-amber-800 border-amber-300";
-                        badgeIcon = "fa-circle-exclamation";
-                    }
+                # Cambio de estado dinámico
+                st.markdown("#### ⚙️ Actualizar Estado del Reporte")
+                nuevo_estado = st.selectbox(
+                    "Estado Actual:", 
+                    ["Abierto", "En Proceso", "Resuelto"], 
+                    index=["Abierto", "En Proceso", "Resuelto"].index(reporte['Estado']) if reporte['Estado'] in ["Abierto", "En Proceso", "Resuelto"] else 0,
+                    key=f"estado_{id_sel}"
+                )
 
-                    tr.innerHTML = `
-                        <td class="p-4">
-                            <span class="font-bold text-fluitek-800">${r.id}</span>
-                            <div class="text-xs text-slate-400">${r.fecha}</div>
-                        </td>
-                        <td class="p-4">
-                            <div class="font-semibold text-slate-800">${r.cliente}</div>
-                            <div class="text-xs text-slate-500">${r.faena}</div>
-                        </td>
-                        <td class="p-4">
-                            <span class="font-mono bg-slate-100 px-2 py-1 rounded text-xs border font-semibold text-slate-700">${r.tag}</span>
-                        </td>
-                        <td class="p-4 text-xs font-medium text-slate-600">${r.tipo}</td>
-                        <td class="p-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeClass}">
-                                <i class="fa-solid ${badgeIcon} mr-1.5 text-[10px]"></i> ${r.criticidad}
-                            </span>
-                        </td>
-                        <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
-                        <td class="p-4 text-center">
-                            <div class="flex items-center justify-center space-x-2">
-                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-fluitek-600 hover:bg-fluitek-50 rounded-lg transition">
-                                    <i class="fa-solid fa-file-pdf text-base"></i>
-                                </button>
-                                <button onclick="editReport('${r.id}')" title="Editar" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <button onclick="deleteReport('${r.id}')" title="Eliminar" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
+                if st.button("💾 Actualizar Estado"):
+                    df_reportes.loc[idx_reporte, "Estado"] = nuevo_estado
+                    guardar_reportes_df(df_reportes)
+                    st.success(f"Estado del reporte {id_sel} cambiado a '{nuevo_estado}'")
+                    st.rerun()
 
-        function openNewReportModal() {
-            document.getElementById('reportForm').reset();
-            document.getElementById('reportId').value = '';
-            document.getElementById('modalTitle').innerText = 'Nuevo Reporte de Campo - Fluitek';
-            document.getElementById('reportModal').classList.remove('hidden');
-        }
+            with col_det2:
+                ruta_img = reporte['Ruta_Foto']
+                if pd.notna(ruta_img) and ruta_img != "" and os.path.exists(str(ruta_img)):
+                    st.image(ruta_img, caption=f"Fotografía del Reporte - {reporte['ID']}", use_container_width=True)
+                else:
+                    st.warning("📷 Sin fotografía adjunta")
 
-        function closeReportModal() {
-            document.getElementById('reportModal').classList.add('hidden');
-        }
+# -----------------------------------------------------------------------------
+# 6. MÓDULO 3: ESTADÍSTICAS Y PANEL METRICAS
+# -----------------------------------------------------------------------------
+elif opcion == "📊 Estadísticas":
+    st.header("📊 Métricas de Inspección")
 
-        function getGPSLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lng = position.coords.longitude.toFixed(4);
-                    document.getElementById('inputGPS').value = `${lat}, ${lng}`;
-                }, () => {
-                    alert('No se pudo obtener la geolocalización. Se usará una por defecto.');
-                    document.getElementById('inputGPS').value = "-27.5738, -70.7582";
-                });
-            } else {
-                alert('Geolocalización no soportada por su navegador.');
-            }
-        }
+    df_reportes = cargar_reportes()
 
-        function saveReport(e) {
-            e.preventDefault();
-            const idInput = document.getElementById('reportId').value;
-            const now = new Date();
-            const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
+    if df_reportes.empty:
+        st.info("No hay datos disponibles para mostrar estadísticas.")
+    else:
+        # Métricas Clave (KPIs)
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        kpi1.metric("Total Reportes", len(df_reportes))
+        kpi2.metric("Abiertos / Pendientes", len(df_reportes[df_reportes["Estado"] == "Abierto"]))
+        kpi3.metric("En Proceso", len(df_reportes[df_reportes["Estado"] == "En Proceso"]))
+        kpi4.metric("Resueltos", len(df_reportes[df_reportes["Estado"] == "Resuelto"]))
 
-            if (idInput) {
-                const index = reports.findIndex(r => r.id === idInput);
-                if (index !== -1) {
-                    reports[index] = {
-                        ...reports[index],
-                        cliente: document.getElementById('inputCliente').value,
-                        faena: document.getElementById('inputFaena').value,
-                        tag: document.getElementById('inputTag').value,
-                        tipo: document.getElementById('inputTipo').value,
-                        criticidad: document.getElementById('inputCriticidad').value,
-                        inspector: document.getElementById('inputInspector').value,
-                        temp: document.getElementById('inputTemp').value || '-',
-                        presion: document.getElementById('inputPresion').value || '-',
-                        iso: document.getElementById('inputISO').value || '-',
-                        gps: document.getElementById('inputGPS').value || 'N/A',
-                        diagnostico: document.getElementById('inputDiagnostico').value,
-                        recomendaciones: document.getElementById('inputRecomendaciones').value
-                    };
-                }
-            } else {
-                const folioNum = String(reports.length + 1).padStart(3, '0');
-                const newReport = {
-                    id: `FLT-2026-${folioNum}`,
-                    fecha: dateStr,
-                    cliente: document.getElementById('inputCliente').value,
-                    faena: document.getElementById('inputFaena').value,
-                    tag: document.getElementById('inputTag').value,
-                    tipo: document.getElementById('inputTipo').value,
-                    criticidad: document.getElementById('inputCriticidad').value,
-                    inspector: document.getElementById('inputInspector').value,
-                    temp: document.getElementById('inputTemp').value || '-',
-                    presion: document.getElementById('inputPresion').value || '-',
-                    iso: document.getElementById('inputISO').value || '-',
-                    gps: document.getElementById('inputGPS').value || 'N/A',
-                    diagnostico: document.getElementById('inputDiagnostico').value,
-                    recomendaciones: document.getElementById('inputRecomendaciones').value
-                };
-                reports.unshift(newReport);
-            }
+        st.markdown("---")
 
-            saveToStorage();
-            renderReports();
-            closeReportModal();
-        }
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.subheader("Reportes por Categoría")
+            st.bar_chart(df_reportes["Categoría"].value_counts())
 
-        function editReport(id) {
-            const item = reports.find(r => r.id === id);
-            if (!item) return;
-
-            document.getElementById('reportId').value = item.id;
-            document.getElementById('inputCliente').value = item.cliente;
-            document.getElementById('inputFaena').value = item.faena;
-            document.getElementById('inputTag').value = item.tag;
-            document.getElementById('inputTipo').value = item.tipo;
-            document.getElementById('inputCriticidad').value = item.criticidad;
-            document.getElementById('inputInspector').value = item.inspector;
-            document.getElementById('inputTemp').value = item.temp || '';
-            document.getElementById('inputPresion').value = item.presion || '';
-            document.getElementById('inputISO').value = item.iso || '';
-            document.getElementById('inputGPS').value = item.gps || '';
-            document.getElementById('inputDiagnostico').value = item.diagnostico;
-            document.getElementById('inputRecomendaciones').value = item.recomendaciones;
-
-            document.getElementById('modalTitle').innerText = `Editar Reporte ${item.id}`;
-            document.getElementById('reportModal').classList.remove('hidden');
-        }
-
-        function deleteReport(id) {
-            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
-                reports = reports.filter(r => r.id !== id);
-                saveToStorage();
-                renderReports();
-            }
-        }
-
-        function previewReport(id) {
-            const item = reports.find(r => r.id === id);
-            if (!item) return;
-
-            document.getElementById('previewFolio').innerText = `FOLIO: ${item.id}`;
-            document.getElementById('previewFecha').innerText = `Fecha: ${item.fecha}`;
-            document.getElementById('previewCliente').innerText = item.cliente;
-            document.getElementById('previewFaena').innerText = item.faena;
-            document.getElementById('previewGPS').innerText = item.gps;
-            document.getElementById('previewTag').innerText = item.tag;
-            document.getElementById('previewTipo').innerText = item.tipo;
-            document.getElementById('previewInspector').innerText = item.inspector;
-            document.getElementById('previewFirmaTecnico').innerText = item.inspector;
-
-            document.getElementById('previewTemp').innerText = item.temp;
-            document.getElementById('previewPresion').innerText = item.presion;
-            document.getElementById('previewISO').innerText = item.iso;
-
-            document.getElementById('previewDiagnostico').innerText = item.diagnostico || 'Sin observaciones.';
-            document.getElementById('previewRecomendaciones').innerText = item.recomendaciones || 'Sin recomendaciones registradas.';
-
-            const badge = document.getElementById('previewBadgeCriticidad');
-            if (item.criticidad === 'ALTA') {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-600 text-white";
-                badge.innerText = "CRITICIDAD ALTA / ALARMA TÉCNICA";
-            } else if (item.criticidad === 'MEDIA') {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-500 text-white";
-                badge.innerText = "CRITICIDAD MEDIA / ADVERTENCIA";
-            } else {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-600 text-white";
-                badge.innerText = "CONDICIÓN OPERATIVA NORMAL";
-            }
-
-            const container = document.getElementById('printPreviewContainer');
-            container.classList.remove('hidden');
-            container.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function closePreview() {
-            document.getElementById('printPreviewContainer').classList.add('hidden');
-        }
-
-        function exportDataCSV() {
-            if (reports.length === 0) {
-                alert('No hay datos para exportar.');
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\\n";
-
-            reports.forEach(r => {
-                const row = [
-                    `"${r.id}"`,
-                    `"${r.fecha}"`,
-                    `"${r.cliente}"`,
-                    `"${r.faena}"`,
-                    `"${r.tag}"`,
-                    `"${r.tipo}"`,
-                    `"${r.criticidad}"`,
-                    `"${r.inspector}"`,
-                    `"${r.temp}"`,
-                    `"${r.presion}"`,
-                    `"${r.iso}"`,
-                    `"${r.gps}"`,
-                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
-                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
-                ].join(",");
-                csvContent += row + "\\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    </script>
-</body>
-</html>
-"""
-
-# Inyección del HTML dentro del componente de Streamlit
-components.html(fluitek_app_html, height=1000, scrolling=True)
+        with col_g2:
+            st.subheader("Reportes por Prioridad")
+            st.bar_chart(df_reportes["Prioridad"].value_counts())
