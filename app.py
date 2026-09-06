@@ -1,4 +1,4 @@
-[18:08, 6/9/2026] Nicolás Bórquez: import streamlit as st
+import streamlit as st
 import streamlit.components.v1 as components
 
 # Configuración de página en Streamlit
