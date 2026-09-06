@@ -764,10 +764,9 @@ fluitek_app_html = """
 </html>
 """
 
-# Renderizar el componente en la app de Streamlit
+# Reemplaza desde donde empieza components.html hasta el final por esto:
 components.html(
     fluitek_app_html, 
     height=1000, 
-    scrolling=True,
-    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+    scrolling=True
 )
