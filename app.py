@@ -1,32 +1,5 @@
 import streamlit as st
 import streamlit.components.v1 as components
-
-# Configuración de página en Streamlit
-st.set_page_config(
-    page_title="Fluitek - Reportes Técnicos",
-    page_icon="⚙️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Estilo para eliminar márgenes extra de Streamlit
-st.markdown("""
-    <style>
-        .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; }
-        header { visibility: hidden; }
-        footer { visibility: hidden; }
-    </style>
-""", unsafe_allow_html=True)
-
-fluitek_full_app = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluitek - Field & Technical…
-[18:12, 6/9/2026] Nicolás Bórquez: import streamlit as st
-import streamlit.components.v1 as components
 import json
 import base64
 from datetime import datetime
@@ -39,17 +12,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS para ocultar bordes por defecto de Streamlit y dar apariencia limpia
-st.markdown("""
-    <style>
-        .block-container { padding-top: 1rem; padding-bottom: 0rem; }
-        header { visibility: hidden; }
-        footer { visibility: hidden; }
-        div[data-testid="stSidebar"] { background-color: #0f172a; color: white; }
-    </style>
-""", unsafe_allow_html=True)
+# Estilos CSS
+css_code = """
+<style>
+.block-container { padding-top: 1rem; padding-bottom: 0rem; }
+header { visibility: hidden; }
+footer { visibility: hidden; }
+div[data-testid="stSidebar"] { background-color: #0f172a; color: white; }
+</style>
+"""
+st.markdown(css_code, unsafe_allow_html=True)
 
-# 2. Inicializar la lista de reportes en la sesión si no existe
+# 2. Inicializar la lista de reportes en la sesión
 if "reports_list" not in st.session_state:
     st.session_state.reports_list = [
         {
@@ -121,7 +95,6 @@ with st.sidebar:
             if not input_ot or not input_cliente or not input_tag or not input_inspector or not input_diagnostico:
                 st.error("⚠️ Por favor completa los campos obligatorios (*).")
             else:
-                # Procesar imagen a base64 si existe
                 img_data_uri = None
                 if uploaded_file is not None:
                     bytes_data = uploaded_file.getvalue()
@@ -153,7 +126,7 @@ with st.sidebar:
 # 4. PREPARAR DATOS JSON PARA EL DASHBOARD
 json_reports_data = json.dumps(st.session_state.reports_list, ensure_ascii=False)
 
-# 5. CÓDIGO HTML DE LA PLATAFORMA (FORMATO OSCURO OFICIAL FLUITEK)
+# 5. CÓDIGO HTML DE LA PLATAFORMA
 fluitek_dashboard_html = f"""
 <!DOCTYPE html>
 <html lang="es">
@@ -385,11 +358,11 @@ fluitek_dashboard_html = f"""
                     badgeHTML = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/40">
                                     <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> ALTA / ALARMA
                                  </span>`;
-                } else if (r.criticidad === 'MEDIA') {{
+                }} else if (r.criticidad === 'MEDIA') {{
                     badgeHTML = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">
                                     <i class="fa-solid fa-circle-exclamation mr-1.5"></i> ADVERTENCIA
                                  </span>`;
-                } else {{
+                }} else {{
                     badgeHTML = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                                     <i class="fa-solid fa-circle-check mr-1.5"></i> NORMAL
                                  </span>`;
