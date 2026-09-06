@@ -1,175 +1,711 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
+import streamlit.components.v1 as components
 
-# Configuración inicial de la página
+# Configuración de la página en Streamlit
 st.set_page_config(
     page_title="Fluitek - Reportes Técnicos",
     page_icon="⚙️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Estilo personalizado para botones y encabezados
-st.markdown("""
-    <style>
-    .main-title {
-        color: #0c4a6e;
-        font-weight: 800;
-        font-size: 28px;
-    }
-    .sub-title {
-        color: #64748b;
-        font-size: 14px;
-        margin-bottom: 20px;
-    }
-    div.stButton > button:first-child {
-        background-color: #f59e0b;
-        color: #0f172a;
-        font-weight: bold;
-        border: none;
-        border-radius: 8px;
-    }
-    div.stButton > button:first-child:hover {
-        background-color: #d97706;
-        color: white;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Inicializar la base de datos temporal en la sesión
-if "reports" not in st.session_state:
-    st.session_state.reports = [
-        {
-            "Folio": "FLT-2026-001",
-            "OT": "OT-8840",
-            "Fecha": "2026-09-05 14:30",
-            "Cliente": "Minera Pelambres",
-            "Faena": "Planta Concentradora",
-            "Tag": "BOMBA-HYD-04",
-            "Tipo": "Monitoreo de Condición",
-            "Criticidad": "🔴 ALTA",
-            "Inspector": "Carlos Mendoza",
-            "Diagnostico": "Presencia de partículas metálicas en muestra de drenaje.",
-            "Recomendaciones": "Reemplazo inmediato de filtros de retorno."
-        },
-        {
-            "Folio": "FLT-2026-002",
-            "OT": "OT-8841",
-            "Fecha": "2026-09-06 09:15",
-            "Cliente": "Atacama Minerals",
-            "Faena": "Mina Subterránea",
-            "Tag": "RED-PARAMAX-9000",
-            "Tipo": "Análisis de Aceite / Fluidos",
-            "Criticidad": "🟡 MEDIA",
-            "Inspector": "Andrea Rojas",
-            "Diagnostico": "Viscosidad ligeramente fuera de rango óptimo.",
-            "Recomendaciones": "Tomar nueva muestra de seguimiento en 15 días."
-        }
-    ]
-
-# Función modal para crear nuevo reporte
-@st.dialog("📋 Nuevo Reporte de Campo - Fluitek")
-def modal_nuevo_reporte():
-    with st.form("form_reporte", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            ot = st.text_input("Orden de Trabajo (OT) *", placeholder="Ej: OT-10452")
-            cliente = st.text_input("Cliente *", placeholder="Ej: Minera Candelaria")
-            faena = st.text_input("Faena / Planta *", placeholder="Ej: Planta Concentradora")
-        with col2:
-            tag = st.text_input("Equipo / Tag ID *", placeholder="Ej: RED-9000-A")
-            tipo = st.selectbox("Tipo de Servicio", [
-                "Monitoreo de Condición",
-                "Análisis de Aceite / Fluidos",
-                "Mantenimiento Hidráulico",
-                "Inspección General"
-            ])
-            criticidad = st.selectbox("Nivel de Criticidad", [
-                "🟢 NORMAL",
-                "🟡 MEDIA",
-                "🔴 ALTA"
-            ])
-        
-        inspector = st.text_input("Inspector Responsable *", placeholder="Nombre del Técnico")
-        diagnostico = st.text_area("Diagnóstico Técnico y Hallazgos *", placeholder="Escriba los hallazgos...")
-        recomendaciones = st.text_area("Recomendaciones y Acciones Correctivas", placeholder="Escriba las recomendaciones...")
-        
-        submitted = st.form_submit_button("💾 Guardar Reporte", use_container_width=True)
-        if submitted:
-            if not ot or not cliente or not faena or not tag or not inspector or not diagnostico:
-                st.error("Por favor completa los campos obligatorios (*).")
-            else:
-                folio_num = len(st.session_state.reports) + 1
-                nuevo_registro = {
-                    "Folio": f"FLT-2026-{folio_num:03d}",
-                    "OT": ot,
-                    "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "Cliente": cliente,
-                    "Faena": faena,
-                    "Tag": tag,
-                    "Tipo": tipo,
-                    "Criticidad": criticidad,
-                    "Inspector": inspector,
-                    "Diagnostico": diagnostico,
-                    "Recomendaciones": recomendaciones
+# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
+fluitek_app_html = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluitek - Sistema de Reportes Técnicos y Monitoreo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fluitek: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0a3651',
+                        }
+                    }
                 }
-                st.session_state.reports.insert(0, nuevo_registro)
-                st.success("¡Reporte guardado con éxito!")
-                st.rerun()
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+            .print-card { border: 1px solid #ccc; box-shadow: none !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
-# --- ENCABEZADO Y BOTÓN PRINCIPAL ---
-header_col1, header_col2 = st.columns([3, 1])
-with header_col1:
-    st.markdown('<div class="main-title">FLUITEK - Field & Technical Reports</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</div>', unsafe_allow_html=True)
+    <!-- Top Navigation Bar -->
+    <header class="bg-fluitek-900 text-white shadow-lg no-print sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-fluitek-500 text-white font-black text-xl px-3 py-1 rounded shadow tracking-wider">
+                    FLUITEK
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">Field & Technical Reports</h1>
+                    <p class="text-xs text-slate-300">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openNewReportModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center shadow">
+                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte
+                </button>
+                <button onclick="exportDataCSV()" class="bg-fluitek-700 hover:bg-fluitek-600 text-white px-3 py-2 rounded-lg text-sm transition flex items-center">
+                    <i class="fa-solid fa-file-excel mr-2"></i> CSV
+                </button>
+            </div>
+        </div>
+    </header>
 
-with header_col2:
-    if st.button("➕ Nuevo Reporte", use_container_width=True):
-        modal_nuevo_reporte()
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
 
-# --- TARJETAS KPI ---
-df = pd.DataFrame(st.session_state.reports)
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-fluitek-600 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Total Reportes</p>
+                    <h3 id="kpi-total" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-fluitek-100 text-fluitek-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+            </div>
 
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-kpi1.metric("Total Reportes", len(df))
-kpi2.metric("Criticidad Alta", len(df[df["Criticidad"] == "🔴 ALTA"]) if not df.empty else 0)
-kpi3.metric("En Advertencia", len(df[df["Criticidad"] == "🟡 MEDIA"]) if not df.empty else 0)
-kpi4.metric("Condición Normal", len(df[df["Criticidad"] == "🟢 NORMAL"]) if not df.empty else 0)
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Criticidad Alta / Alarma</p>
+                    <h3 id="kpi-critical" class="text-2xl font-bold text-red-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
 
-st.divider()
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">En Advertencia</p>
+                    <h3 id="kpi-warning" class="text-2xl font-bold text-amber-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+            </div>
 
-# --- FILTROS Y BÚSQUEDA ---
-col_search, col_crit, col_tipo = st.columns([2, 1, 1])
-with col_search:
-    search_query = st.text_input("🔍 Buscar", placeholder="Buscar por OT, Cliente, Tag, Inspector...")
-with col_crit:
-    filter_crit = st.selectbox("Filtrar Criticidad", ["Todas", "🔴 ALTA", "🟡 MEDIA", "🟢 NORMAL"])
-with col_tipo:
-    filter_tipo = st.selectbox("Filtrar Tipo", ["Todos", "Monitoreo de Condición", "Análisis de Aceite / Fluidos", "Mantenimiento Hidráulico", "Inspección General"])
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Condición Normal</p>
+                    <h3 id="kpi-normal" class="text-2xl font-bold text-emerald-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+        </div>
 
-# Aplicar filtros al DataFrame
-filtered_df = df.copy()
-if search_query:
-    filtered_df = filtered_df[
-        filtered_df["OT"].str.contains(search_query, case=False, na=False) |
-        filtered_df["Cliente"].str.contains(search_query, case=False, na=False) |
-        filtered_df["Tag"].str.contains(search_query, case=False, na=False) |
-        filtered_df["Inspector"].str.contains(search_query, case=False, na=False)
-    ]
+        <!-- Filter & Search Controls -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
+            <div class="flex flex-1 gap-3 w-full md:w-auto">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por Cliente, Tag de Equipo, Técnico..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                </div>
+                <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <option value="ALL">Todas las Criticidades</option>
+                    <option value="ALTA">Alta / Alarma</option>
+                    <option value="MEDIA">Advertencia</option>
+                    <option value="NORMAL">Normal</option>
+                </select>
+                <select id="filterType" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <option value="ALL">Todos los Tipos</option>
+                    <option value="Monitoreo de Condición">Monitoreo de Condición</option>
+                    <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
+                    <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
+                    <option value="Inspección General">Inspección General</option>
+                </select>
+            </div>
+            <button onclick="loadSampleData()" class="text-xs text-fluitek-600 hover:text-fluitek-800 underline font-medium">
+                <i class="fa-solid fa-rotate-left mr-1"></i> Cargar Datos de Ejemplo
+            </button>
+        </div>
 
-if filter_crit != "Todas":
-    filtered_df = filtered_df[filtered_df["Criticidad"] == filter_crit]
+        <!-- Reports Table View -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden no-print">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b">
+                            <th class="p-4">Folio / Fecha</th>
+                            <th class="p-4">Cliente / Faena</th>
+                            <th class="p-4">Equipo / Tag</th>
+                            <th class="p-4">Tipo de Servicio</th>
+                            <th class="p-4">Criticidad</th>
+                            <th class="p-4">Inspector</th>
+                            <th class="p-4 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportsTableBody" class="divide-y text-sm">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="p-8 text-center text-slate-500 hidden">
+                <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
+                <p>No se encontraron reportes con los filtros seleccionados.</p>
+            </div>
+        </div>
 
-if filter_tipo != "Todos":
-    filtered_df = filtered_df[filtered_df["Tipo"] == filter_tipo]
+        <!-- Printable Official Report View -->
+        <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
+            <div class="flex justify-between items-start border-b pb-4 mb-6">
+                <div>
+                    <div class="text-2xl font-black text-fluitek-800 tracking-wider">FLUITEK CHILE</div>
+                    <p class="text-xs text-slate-500">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
+                </div>
+                <div class="text-right">
+                    <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
+                    <p id="previewFecha" class="text-xs text-slate-500">Fecha: 06/09/2026</p>
+                </div>
+            </div>
 
-# --- TABLA DE REPORTES ---
-st.subheader("Registros de Inspección")
-if not filtered_df.empty:
-    st.dataframe(
-        filtered_df[["Folio", "OT", "Fecha", "Cliente", "Faena", "Tag", "Tipo", "Criticidad", "Inspector"]],
-        use_container_width=True,
-        hide_index=True
-    )
-else:
-    st.info("No hay reportes registrados o ninguno coincide con los filtros aplicados.")
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg mb-6 border text-xs">
+                <div>
+                    <p><strong class="text-slate-700">Cliente:</strong> <span id="previewCliente">-</span></p>
+                    <p><strong class="text-slate-700">Faena / Planta:</strong> <span id="previewFaena">-</span></p>
+                    <p><strong class="text-slate-700">Ubicación GPS:</strong> <span id="previewGPS">-</span></p>
+                </div>
+                <div>
+                    <p><strong class="text-slate-700">Equipo / Tag:</strong> <span id="previewTag">-</span></p>
+                    <p><strong class="text-slate-700">Tipo Servicio:</strong> <span id="previewTipo">-</span></p>
+                    <p><strong class="text-slate-700">Inspector Fluitek:</strong> <span id="previewInspector">-</span></p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">ESTADO & CRITICIDAD DEL EQUIPO</h4>
+                <div id="previewBadgeCriticidad" class="inline-block px-4 py-2 rounded font-bold text-sm mb-2">
+                    CRITICIDAD ALTA
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-xs bg-slate-100 p-3 rounded mt-2">
+                    <div><strong>Temp. Operación:</strong> <span id="previewTemp">-</span> °C</div>
+                    <div><strong>Presión / Flujo:</strong> <span id="previewPresion">-</span> PSI</div>
+                    <div><strong>Nivel ISO Contaminación:</strong> <span id="previewISO">-</span></div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">DIAGNÓSTICO TÉCNICO & HALLAZGOS</h4>
+                <p id="previewDiagnostico" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 p-3 rounded border">
+                    Sin observaciones registrados.
+                </p>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">RECOMENDACIONES DE ACCIÓN</h4>
+                <p id="previewRecomendaciones" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-amber-50/50 p-3 rounded border border-amber-200">
+                    Sin recomendaciones.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t text-center text-xs">
+                <div>
+                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Firma Inspector</div>
+                    <p class="font-bold" id="previewFirmaTecnico">Técnico Fluitek</p>
+                    <p class="text-slate-500">Especialista en Monitoreo de Condición</p>
+                </div>
+                <div>
+                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Aprobación Cliente</div>
+                    <p class="font-bold">Recepción Cliente / Supervisión</p>
+                    <p class="text-slate-500">Conforme / Notificado</p>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 no-print">
+                <button onclick="closePreview()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">
+                    Cerrar Vista Previa
+                </button>
+                <button onclick="window.print()" class="px-4 py-2 bg-fluitek-600 text-white rounded-lg text-xs font-semibold hover:bg-fluitek-700 flex items-center">
+                    <i class="fa-solid fa-print mr-2"></i> Imprimir / Exportar PDF
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Form: Dynamic New/Edit Report -->
+    <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-fluitek-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+                <h3 class="font-bold text-lg flex items-center">
+                    <i class="fa-solid fa-file-signature text-amber-400 mr-2"></i> 
+                    <span id="modalTitle">Nuevo Reporte de Campo - Fluitek</span>
+                </h3>
+                <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
+                <input type="hidden" id="reportId">
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
+                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Faena / Planta *</label>
+                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Equipo / Tag ID *</label>
+                        <input type="text" id="inputTag" required placeholder="Ej: RED-9000-A" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Servicio</label>
+                        <select id="inputTipo" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                            <option value="Monitoreo de Condición">Monitoreo de Condición</option>
+                            <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
+                            <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
+                            <option value="Inspección General">Inspección General</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nivel de Criticidad</label>
+                        <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                            <option value="NORMAL" class="text-emerald-600 font-bold">🟢 Normal</option>
+                            <option value="MEDIA" class="text-amber-600 font-bold">🟡 Advertencia</option>
+                            <option value="ALTA" class="text-red-600 font-bold">🔴 Critica / Alarma</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Inspector responsable *</label>
+                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Parameters Grid -->
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-500">Temp. (°C)</label>
+                            <input type="number" id="inputTemp" placeholder="65" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500">Presión (PSI)</label>
+                            <input type="number" id="inputPresion" placeholder="1800" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500">Código ISO 4406</label>
+                            <input type="text" id="inputISO" placeholder="18/16/13" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-700">Coordenadas / Ubicación GPS</label>
+                        <button type="button" onclick="getGPSLocation()" class="text-xs text-fluitek-600 hover:underline flex items-center">
+                            <i class="fa-solid fa-location-crosshairs mr-1"></i> Capturar GPS Actual
+                        </button>
+                    </div>
+                    <input type="text" id="inputGPS" placeholder="-27.5738, -70.7582" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
+                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
+                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-fluitek-600 text-white rounded-lg text-sm font-semibold hover:bg-fluitek-700 shadow flex items-center">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Reporte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let reports = [];
+
+        const sampleReports = [
+            {
+                id: "FLT-2026-001",
+                fecha: "2026-09-05 14:30",
+                cliente: "Minera Pelambres",
+                faena: "Planta Concentradora",
+                tag: "BOMBA-HYD-04",
+                tipo: "Monitoreo de Condición",
+                criticidad: "ALTA",
+                inspector: "Carlos Mendoza",
+                temp: 78,
+                presion: 2100,
+                iso: "21/19/16",
+                gps: "-31.8722, -70.5211",
+                diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
+                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
+            },
+            {
+                id: "FLT-2026-002",
+                fecha: "2026-09-06 09:15",
+                cliente: "Atacama Minerals",
+                faena: "Mina Subterránea",
+                tag: "RED-PARAMAX-9000",
+                tipo: "Análisis de Aceite / Fluidos",
+                criticidad: "MEDIA",
+                inspector: "Andrea Rojas",
+                temp: 62,
+                presion: 1450,
+                iso: "18/16/13",
+                gps: "-27.3667, -70.3333",
+                diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
+                recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
+            },
+            {
+                id: "FLT-2026-003",
+                fecha: "2026-09-06 11:00",
+                cliente: "Candelaria",
+                faena: "Área Chancado",
+                tag: "CH-01-LUB-02",
+                tipo: "Mantenimiento Hidráulico",
+                criticidad: "NORMAL",
+                inspector: "Carlos Mendoza",
+                temp: 45,
+                presion: 1200,
+                iso: "15/13/10",
+                gps: "-27.5738, -70.7582",
+                diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
+                recomendaciones: "Continuar con plan estándar de lubricación preventiva."
+            }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('fluitek_reports');
+            if (saved) {
+                try {
+                    reports = JSON.parse(saved);
+                } catch(e) {
+                    reports = sampleReports;
+                }
+            } else {
+                reports = sampleReports;
+                saveToStorage();
+            }
+            renderReports();
+        });
+
+        function saveToStorage() {
+            localStorage.setItem('fluitek_reports', JSON.stringify(reports));
+        }
+
+        function loadSampleData() {
+            reports = [...sampleReports];
+            saveToStorage();
+            renderReports();
+        }
+
+        function renderReports() {
+            const tbody = document.getElementById('reportsTableBody');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const severity = document.getElementById('filterSeverity').value;
+            const type = document.getElementById('filterType').value;
+
+            tbody.innerHTML = '';
+
+            let filtered = reports.filter(r => {
+                const matchesSearch = r.cliente.toLowerCase().includes(search) || 
+                                     r.tag.toLowerCase().includes(search) || 
+                                     r.inspector.toLowerCase().includes(search) ||
+                                     r.id.toLowerCase().includes(search);
+                const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
+                const matchesType = (type === 'ALL') || (r.tipo === type);
+                return matchesSearch && matchesSeverity && matchesType;
+            });
+
+            document.getElementById('kpi-total').innerText = reports.length;
+            document.getElementById('kpi-critical').innerText = reports.filter(r => r.criticidad === 'ALTA').length;
+            document.getElementById('kpi-warning').innerText = reports.filter(r => r.criticidad === 'MEDIA').length;
+            document.getElementById('kpi-normal').innerText = reports.filter(r => r.criticidad === 'NORMAL').length;
+
+            if (filtered.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+            } else {
+                document.getElementById('emptyState').classList.add('hidden');
+                
+                filtered.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition border-b";
+
+                    let badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                    let badgeIcon = "fa-circle-check";
+                    if (r.criticidad === 'ALTA') {
+                        badgeClass = "bg-red-100 text-red-800 border-red-300";
+                        badgeIcon = "fa-triangle-exclamation";
+                    } else if (r.criticidad === 'MEDIA') {
+                        badgeClass = "bg-amber-100 text-amber-800 border-amber-300";
+                        badgeIcon = "fa-circle-exclamation";
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4">
+                            <span class="font-bold text-fluitek-800">${r.id}</span>
+                            <div class="text-xs text-slate-400">${r.fecha}</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="font-semibold text-slate-800">${r.cliente}</div>
+                            <div class="text-xs text-slate-500">${r.faena}</div>
+                        </td>
+                        <td class="p-4">
+                            <span class="font-mono bg-slate-100 px-2 py-1 rounded text-xs border font-semibold text-slate-700">${r.tag}</span>
+                        </td>
+                        <td class="p-4 text-xs font-medium text-slate-600">${r.tipo}</td>
+                        <td class="p-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeClass}">
+                                <i class="fa-solid ${badgeIcon} mr-1.5 text-[10px]"></i> ${r.criticidad}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
+                        <td class="p-4 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-fluitek-600 hover:bg-fluitek-50 rounded-lg transition">
+                                    <i class="fa-solid fa-file-pdf text-base"></i>
+                                </button>
+                                <button onclick="editReport('${r.id}')" title="Editar" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="deleteReport('${r.id}')" title="Eliminar" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function openNewReportModal() {
+            document.getElementById('reportForm').reset();
+            document.getElementById('reportId').value = '';
+            document.getElementById('modalTitle').innerText = 'Nuevo Reporte de Campo - Fluitek';
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+        }
+
+        function getGPSLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lng = position.coords.longitude.toFixed(4);
+                    document.getElementById('inputGPS').value = ${lat}, ${lng};
+                }, () => {
+                    alert('No se pudo obtener la geolocalización. Se usará una por defecto.');
+                    document.getElementById('inputGPS').value = "-27.5738, -70.7582";
+                });
+            } else {
+                alert('Geolocalización no soportada por su navegador.');
+            }
+        }
+
+        function saveReport(e) {
+            e.preventDefault();
+            const idInput = document.getElementById('reportId').value;
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
+
+            if (idInput) {
+                const index = reports.findIndex(r => r.id === idInput);
+                if (index !== -1) {
+                    reports[index] = {
+                        ...reports[index],
+                        cliente: document.getElementById('inputCliente').value,
+                        faena: document.getElementById('inputFaena').value,
+                        tag: document.getElementById('inputTag').value,
+                        tipo: document.getElementById('inputTipo').value,
+                        criticidad: document.getElementById('inputCriticidad').value,
+                        inspector: document.getElementById('inputInspector').value,
+                        temp: document.getElementById('inputTemp').value || '-',
+                        presion: document.getElementById('inputPresion').value || '-',
+                        iso: document.getElementById('inputISO').value || '-',
+                        gps: document.getElementById('inputGPS').value || 'N/A',
+                        diagnostico: document.getElementById('inputDiagnostico').value,
+                        recomendaciones: document.getElementById('inputRecomendaciones').value
+                    };
+                }
+            } else {
+                const folioNum = String(reports.length + 1).padStart(3, '0');
+                const newReport = {
+                    id: FLT-2026-${folioNum},
+                    fecha: dateStr,
+                    cliente: document.getElementById('inputCliente').value,
+                    faena: document.getElementById('inputFaena').value,
+                    tag: document.getElementById('inputTag').value,
+                    tipo: document.getElementById('inputTipo').value,
+                    criticidad: document.getElementById('inputCriticidad').value,
+                    inspector: document.getElementById('inputInspector').value,
+                    temp: document.getElementById('inputTemp').value || '-',
+                    presion: document.getElementById('inputPresion').value || '-',
+                    iso: document.getElementById('inputISO').value || '-',
+                    gps: document.getElementById('inputGPS').value || 'N/A',
+                    diagnostico: document.getElementById('inputDiagnostico').value,
+                    recomendaciones: document.getElementById('inputRecomendaciones').value
+                };
+                reports.unshift(newReport);
+            }
+
+            saveToStorage();
+            renderReports();
+            closeReportModal();
+        }
+
+        function editReport(id) {
+            const item = reports.find(r => r.id === id);
+            if (!item) return;
+
+            document.getElementById('reportId').value = item.id;
+            document.getElementById('inputCliente').value = item.cliente;
+            document.getElementById('inputFaena').value = item.faena;
+            document.getElementById('inputTag').value = item.tag;
+            document.getElementById('inputTipo').value = item.tipo;
+            document.getElementById('inputCriticidad').value = item.criticidad;
+            document.getElementById('inputInspector').value = item.inspector;
+            document.getElementById('inputTemp').value = item.temp || '';
+            document.getElementById('inputPresion').value = item.presion || '';
+            document.getElementById('inputISO').value = item.iso || '';
+            document.getElementById('inputGPS').value = item.gps || '';
+            document.getElementById('inputDiagnostico').value = item.diagnostico;
+            document.getElementById('inputRecomendaciones').value = item.recomendaciones;
+
+            document.getElementById('modalTitle').innerText = Editar Reporte ${item.id};
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function deleteReport(id) {
+            if (confirm(¿Está seguro de eliminar el reporte ${id}?)) {
+                reports = reports.filter(r => r.id !== id);
+                saveToStorage();
+                renderReports();
+            }
+        }
+
+        function previewReport(id) {
+            const item = reports.find(r => r.id === id);
+            if (!item) return;
+
+            document.getElementById('previewFolio').innerText = FOLIO: ${item.id};
+            document.getElementById('previewFecha').innerText = Fecha: ${item.fecha};
+            document.getElementById('previewCliente').innerText = item.cliente;
+            document.getElementById('previewFaena').innerText = item.faena;
+            document.getElementById('previewGPS').innerText = item.gps;
+            document.getElementById('previewTag').innerText = item.tag;
+            document.getElementById('previewTipo').innerText = item.tipo;
+            document.getElementById('previewInspector').innerText = item.inspector;
+            document.getElementById('previewFirmaTecnico').innerText = item.inspector;
+
+            document.getElementById('previewTemp').innerText = item.temp;
+            document.getElementById('previewPresion').innerText = item.presion;
+            document.getElementById('previewISO').innerText = item.iso;
+
+            document.getElementById('previewDiagnostico').innerText = item.diagnostico || 'Sin observaciones.';
+            document.getElementById('previewRecomendaciones').innerText = item.recomendaciones || 'Sin recomendaciones registradas.';
+
+            const badge = document.getElementById('previewBadgeCriticidad');
+            if (item.criticidad === 'ALTA') {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-600 text-white";
+                badge.innerText = "CRITICIDAD ALTA / ALARMA TÉCNICA";
+            } else if (item.criticidad === 'MEDIA') {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-500 text-white";
+                badge.innerText = "CRITICIDAD MEDIA / ADVERTENCIA";
+            } else {
+                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-600 text-white";
+                badge.innerText = "CONDICIÓN OPERATIVA NORMAL";
+            }
+
+            const container = document.getElementById('printPreviewContainer');
+            container.classList.remove('hidden');
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closePreview() {
+            document.getElementById('printPreviewContainer').classList.add('hidden');
+        }
+
+        function exportDataCSV() {
+            if (reports.length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Folio,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp,Presion,ISO,GPS,Diagnostico,Recomendaciones\\n";
+
+            reports.forEach(r => {
+                const row = [
+                    "${r.id}",
+                    "${r.fecha}",
+                    "${r.cliente}",
+                    "${r.faena}",
+                    "${r.tag}",
+                    "${r.tipo}",
+                    "${r.criticidad}",
+                    "${r.inspector}",
+                    "${r.temp}",
+                    "${r.presion}",
+                    "${r.iso}",
+                    "${r.gps}",
+                    "${(r.diagnostico || '').replace(/"/g, '""')}",
+                    "${(r.recomendaciones || '').replace(/"/g, '""')}"
+                ].join(",");
+                csvContent += row + "\\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", Fluitek_Reportes_Campo_${new Date().toISOString().slice(0,10)}.csv);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
+"""
+
+# Inyección del HTML dentro del componente de Streamlit
+components.html(fluitek_app_html, height=1000, scrolling=True)
