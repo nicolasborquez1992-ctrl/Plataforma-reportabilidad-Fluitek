@@ -48,27 +48,36 @@ fluitek_app_html = """
             .print-card { border: 1px solid #ccc; box-shadow: none !important; }
         }
         .print-only { display: none; }
+        /* Estilo distintivo para marca Fluitek */
+        .fluitek-logo-badge {
+            background-color: #000000;
+            color: #ffffff;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            display: inline-block;
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
     <!-- Top Navigation Bar -->
-    <header class="bg-fluitek-900 text-white shadow-lg no-print sticky top-0 z-50">
+    <header class="bg-slate-900 text-white shadow-lg no-print sticky top-0 z-50 border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-fluitek-500 text-white font-black text-xl px-3 py-1 rounded shadow tracking-wider">
+                <!-- Logo Fluitek: Letras Blancas con Fondo Negro -->
+                <div class="fluitek-logo-badge text-xl px-3.5 py-1 rounded shadow-md border border-slate-700">
                     FLUITEK
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold leading-tight">Field & Technical Reports</h1>
-                    <p class="text-xs text-slate-300">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
+                    <h1 class="text-lg font-bold leading-tight text-white">Field & Technical Reports</h1>
+                    <p class="text-xs text-slate-400">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3">
                 <button onclick="openNewReportModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center shadow">
-                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte / Orden de Trabajo
+                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte / OT
                 </button>
-                <button onclick="exportDataCSV()" class="bg-fluitek-700 hover:bg-fluitek-600 text-white px-3 py-2 rounded-lg text-sm transition flex items-center">
+                <button onclick="exportDataCSV()" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 px-3 py-2 rounded-lg text-sm transition flex items-center">
                     <i class="fa-solid fa-file-excel mr-2"></i> CSV
                 </button>
             </div>
@@ -80,12 +89,12 @@ fluitek_app_html = """
 
         <!-- KPI Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-fluitek-600 flex justify-between items-center">
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-slate-900 flex justify-between items-center">
                 <div>
                     <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Total Reportes</p>
                     <h3 id="kpi-total" class="text-2xl font-bold text-slate-800">0</h3>
                 </div>
-                <div class="w-10 h-10 rounded-full bg-fluitek-100 text-fluitek-600 flex items-center justify-center text-lg">
+                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center text-lg">
                     <i class="fa-solid fa-clipboard-list"></i>
                 </div>
             </div>
@@ -126,15 +135,15 @@ fluitek_app_html = """
             <div class="flex flex-1 gap-3 w-full md:w-auto">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por OT, Cliente, Tag, Inspector..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por OT, Cliente, Tag, Inspector..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                 </div>
-                <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                     <option value="ALL">Todas las Criticidades</option>
                     <option value="ALTA">Alta / Alarma</option>
                     <option value="MEDIA">Advertencia</option>
                     <option value="NORMAL">Normal</option>
                 </select>
-                <select id="filterType" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                <select id="filterType" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                     <option value="ALL">Todos los Tipos</option>
                     <option value="Monitoreo de Condición">Monitoreo de Condición</option>
                     <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
@@ -142,7 +151,7 @@ fluitek_app_html = """
                     <option value="Inspección General">Inspección General</option>
                 </select>
             </div>
-            <button onclick="loadSampleData()" class="text-xs text-fluitek-600 hover:text-fluitek-800 underline font-medium">
+            <button onclick="loadSampleData()" class="text-xs text-slate-600 hover:text-black underline font-medium">
                 <i class="fa-solid fa-rotate-left mr-1"></i> Cargar Datos de Ejemplo
             </button>
         </div>
@@ -177,8 +186,11 @@ fluitek_app_html = """
         <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
             <div class="flex justify-between items-start border-b pb-4 mb-6">
                 <div>
-                    <div class="text-2xl font-black text-fluitek-800 tracking-wider">FLUITEK CHILE</div>
-                    <p class="text-xs text-slate-500">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
+                    <!-- Logo Fluitek en Informe: Letras Blancas sobre Fondo Negro -->
+                    <div class="fluitek-logo-badge text-2xl px-4 py-1.5 rounded tracking-wider shadow">
+                        FLUITEK CHILE
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
                 </div>
                 <div class="text-right">
                     <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
@@ -242,7 +254,7 @@ fluitek_app_html = """
                 <button onclick="closePreview()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">
                     Cerrar Vista Previa
                 </button>
-                <button onclick="window.print()" class="px-4 py-2 bg-fluitek-600 text-white rounded-lg text-xs font-semibold hover:bg-fluitek-700 flex items-center">
+                <button onclick="window.print()" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-black flex items-center shadow">
                     <i class="fa-solid fa-print mr-2"></i> Imprimir / Exportar PDF
                 </button>
             </div>
@@ -253,9 +265,9 @@ fluitek_app_html = """
     <!-- Modal Form: Dynamic New/Edit Report with OT -->
     <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div class="bg-fluitek-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
                 <h3 class="font-bold text-lg flex items-center">
-                    <i class="fa-solid fa-file-signature text-amber-400 mr-2"></i> 
+                    <span class="fluitek-logo-badge text-xs px-2 py-0.5 rounded mr-2">FLUITEK</span> 
                     <span id="modalTitle">Nuevo Reporte - Orden de Trabajo</span>
                 </h3>
                 <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
@@ -270,26 +282,26 @@ fluitek_app_html = """
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Orden de Trabajo (OT) *</label>
-                        <input type="text" id="inputOT" required placeholder="Ej: OT-10492" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none font-semibold text-amber-700">
+                        <input type="text" id="inputOT" required placeholder="Ej: OT-10492" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none font-semibold text-amber-700">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
-                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Faena / Planta *</label>
-                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Equipo / Tag ID *</label>
-                        <input type="text" id="inputTag" required placeholder="Ej: RED-9000-A" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                        <input type="text" id="inputTag" required placeholder="Ej: RED-9000-A" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Servicio</label>
-                        <select id="inputTipo" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                        <select id="inputTipo" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                             <option value="Monitoreo de Condición">Monitoreo de Condición</option>
                             <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
                             <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
@@ -298,7 +310,7 @@ fluitek_app_html = """
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Nivel de Criticidad</label>
-                        <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                        <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-slate-800 focus:outline-none">
                             <option value="NORMAL" class="text-emerald-600 font-bold">🟢 Normal</option>
                             <option value="MEDIA" class="text-amber-600 font-bold">🟡 Advertencia</option>
                             <option value="ALTA" class="text-red-600 font-bold">🔴 Critica / Alarma</option>
@@ -306,7 +318,7 @@ fluitek_app_html = """
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Inspector Responsable *</label>
-                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none">
+                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
                     </div>
                 </div>
 
@@ -331,19 +343,19 @@ fluitek_app_html = """
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
-                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
+                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-fluitek-500 focus:outline-none"></textarea>
+                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4 border-t">
                     <button type="button" onclick="closeReportModal()" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">
                         Cancelar
                     </button>
-                    <button type="submit" class="px-5 py-2 bg-fluitek-600 text-white rounded-lg text-sm font-semibold hover:bg-fluitek-700 shadow flex items-center">
+                    <button type="submit" class="px-5 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-black shadow flex items-center">
                         <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Reporte
                     </button>
                 </div>
@@ -476,7 +488,7 @@ fluitek_app_html = """
 
                     tr.innerHTML = `
                         <td class="p-4">
-                            <span class="font-bold text-fluitek-800">${r.id}</span>
+                            <span class="font-bold text-slate-900">${r.id}</span>
                             <div class="text-xs font-semibold text-amber-600"><i class="fa-solid fa-hashtag mr-0.5"></i>OT: ${r.ot || 'N/A'}</div>
                             <div class="text-xs text-slate-400">${r.fecha}</div>
                         </td>
@@ -496,7 +508,7 @@ fluitek_app_html = """
                         <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
                         <td class="p-4 text-center">
                             <div class="flex items-center justify-center space-x-2">
-                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-fluitek-600 hover:bg-fluitek-50 rounded-lg transition">
+                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-slate-800 hover:bg-slate-100 rounded-lg transition">
                                     <i class="fa-solid fa-file-pdf text-base"></i>
                                 </button>
                                 <button onclick="editReport('${r.id}')" title="Editar" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
