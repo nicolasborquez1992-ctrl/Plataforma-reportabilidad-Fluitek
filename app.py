@@ -16,7 +16,7 @@ fluitek_app_html = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluitek - Sistema de Reportes Técnicos y Monitoreo</title>
+    <title>Fluitek - Sistema de Reportes Técnicos</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -68,7 +68,7 @@ fluitek_app_html = """
                 </div>
                 <div>
                     <h1 class="text-lg font-bold leading-tight text-white">Field & Technical Reports</h1>
-                    <p class="text-xs text-slate-400">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
+                    <p class="text-xs text-slate-400">Gestión de Inspecciones & Monitoreo de Condición</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3">
@@ -187,7 +187,7 @@ fluitek_app_html = """
                     <div class="fluitek-logo-badge text-2xl px-4 py-1.5 rounded tracking-wider shadow">
                         FLUITEK CHILE
                     </div>
-                    <p class="text-xs text-slate-500 mt-2">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
+                    <p class="text-xs text-slate-500 mt-2">Servicios de Ingeniería y Mantenimiento Predictivo</p>
                 </div>
                 <div class="text-right">
                     <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
@@ -213,11 +213,6 @@ fluitek_app_html = """
                 <div id="previewBadgeCriticidad" class="inline-block px-4 py-2 rounded font-bold text-sm mb-2">
                     CRITICIDAD ALTA
                 </div>
-                <div class="grid grid-cols-3 gap-4 text-xs bg-slate-100 p-3 rounded mt-2">
-                    <div><strong>Temp. Operación:</strong> <span id="previewTemp">-</span> °C</div>
-                    <div><strong>Presión / Flujo:</strong> <span id="previewPresion">-</span> PSI</div>
-                    <div><strong>Nivel ISO Contaminación:</strong> <span id="previewISO">-</span></div>
-                </div>
             </div>
 
             <div class="mb-6">
@@ -238,7 +233,7 @@ fluitek_app_html = """
                 <div>
                     <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Firma Inspector</div>
                     <p class="font-bold" id="previewFirmaTecnico">Técnico Fluitek</p>
-                    <p class="text-slate-500">Especialista en Monitoreo de Condición</p>
+                    <p class="text-slate-500">Especialista de Terreno</p>
                 </div>
                 <div>
                     <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Aprobación Cliente</div>
@@ -318,32 +313,14 @@ fluitek_app_html = """
                     </div>
                 </div>
 
-                <div class="bg-slate-50 p-3 rounded-lg border">
-                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-[11px] text-slate-500">Temp. (°C)</label>
-                            <input type="number" id="inputTemp" placeholder="65" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] text-slate-500">Presión (PSI)</label>
-                            <input type="number" id="inputPresion" placeholder="1800" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] text-slate-500">Código ISO 4406</label>
-                            <input type="text" id="inputISO" placeholder="18/16/13" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                    </div>
-                </div>
-
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
-                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
+                    <textarea id="inputDiagnostico" rows="4" required placeholder="Describa el estado actual del equipo, hallazgos, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
+                    <textarea id="inputRecomendaciones" rows="3" placeholder="Ej: Realizar cambio de componentes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4 border-t">
@@ -373,11 +350,8 @@ fluitek_app_html = """
                 tipo: "Monitoreo de Condición",
                 criticidad: "ALTA",
                 inspector: "Carlos Mendoza",
-                temp: 78,
-                presion: 2100,
-                iso: "21/19/16",
-                diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
-                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas."
+                diagnostico: "Presencia de partículas metálicas en la inspección visual. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
+                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de intervención dentro de 48 horas."
             },
             {
                 id: "FLT-2026-002",
@@ -389,10 +363,7 @@ fluitek_app_html = """
                 tipo: "Análisis de Aceite / Fluidos",
                 criticidad: "MEDIA",
                 inspector: "Andrea Rojas",
-                temp: 62,
-                presion: 1450,
-                iso: "18/16/13",
-                diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
+                diagnostico: "Desgaste moderado observado en sellos superiores con leve pérdida de estanqueidad.",
                 recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero."
             },
             {
@@ -405,10 +376,7 @@ fluitek_app_html = """
                 tipo: "Mantenimiento Hidráulico",
                 criticidad: "NORMAL",
                 inspector: "Carlos Mendoza",
-                temp: 45,
-                presion: 1200,
-                iso: "15/13/10",
-                diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa. Niveles dentro de norma ISO.",
+                diagnostico: "Inspección de rutina. Sistema hidráulico operando de manera limpia y silenciosa.",
                 recomendaciones: "Continuar con plan estándar de lubricación preventiva."
             }
         ];
@@ -545,9 +513,6 @@ fluitek_app_html = """
                 tipo: document.getElementById('inputTipo').value,
                 criticidad: document.getElementById('inputCriticidad').value,
                 inspector: document.getElementById('inputInspector').value,
-                temp: document.getElementById('inputTemp').value || '-',
-                presion: document.getElementById('inputPresion').value || '-',
-                iso: document.getElementById('inputISO').value || '-',
                 diagnostico: document.getElementById('inputDiagnostico').value,
                 recomendaciones: document.getElementById('inputRecomendaciones').value || 'Sin recomendaciones.'
             };
@@ -587,9 +552,6 @@ fluitek_app_html = """
             document.getElementById('inputTipo').value = r.tipo;
             document.getElementById('inputCriticidad').value = r.criticidad;
             document.getElementById('inputInspector').value = r.inspector;
-            document.getElementById('inputTemp').value = r.temp !== '-' ? r.temp : '';
-            document.getElementById('inputPresion').value = r.presion !== '-' ? r.presion : '';
-            document.getElementById('inputISO').value = r.iso !== '-' ? r.iso : '';
             document.getElementById('inputDiagnostico').value = r.diagnostico;
             document.getElementById('inputRecomendaciones').value = r.recomendaciones;
 
@@ -618,10 +580,6 @@ fluitek_app_html = """
             document.getElementById('previewTipo').innerText = r.tipo;
             document.getElementById('previewInspector').innerText = r.inspector;
             document.getElementById('previewFirmaTecnico').innerText = r.inspector;
-
-            document.getElementById('previewTemp').innerText = r.temp;
-            document.getElementById('previewPresion').innerText = r.presion;
-            document.getElementById('previewISO').innerText = r.iso;
 
             document.getElementById('previewDiagnostico').innerText = r.diagnostico;
             document.getElementById('previewRecomendaciones').innerText = r.recomendaciones;
@@ -652,7 +610,7 @@ fluitek_app_html = """
                 alert("No hay datos para exportar.");
                 return;
             }
-            let csvContent = "data:text/csv;charset=utf-8,ID,OT,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp_C,Presion_PSI,ISO_4406,Diagnostico,Recomendaciones\n";
+            let csvContent = "data:text/csv;charset=utf-8,ID,OT,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Diagnostico,Recomendaciones\n";
             reports.forEach(r => {
                 let row = [
                     `"${r.id}"`,
@@ -664,9 +622,6 @@ fluitek_app_html = """
                     `"${r.tipo}"`,
                     `"${r.criticidad}"`,
                     `"${r.inspector}"`,
-                    `"${r.temp}"`,
-                    `"${r.presion}"`,
-                    `"${r.iso}"`,
                     `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
                     `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
                 ].join(",");
