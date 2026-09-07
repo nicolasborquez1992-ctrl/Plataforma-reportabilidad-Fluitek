@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
+# Código HTML, CSS y JavaScript encapsulado
 fluitek_app_html = """
 <!DOCTYPE html>
 <html lang="es">
@@ -48,7 +48,6 @@ fluitek_app_html = """
             .print-card { border: 1px solid #ccc; box-shadow: none !important; }
         }
         .print-only { display: none; }
-        /* Estilo distintivo para marca Fluitek */
         .fluitek-logo-badge {
             background-color: #000000;
             color: #ffffff;
@@ -64,7 +63,6 @@ fluitek_app_html = """
     <header class="bg-slate-900 text-white shadow-lg no-print sticky top-0 z-50 border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <!-- Logo Fluitek: Letras Blancas con Fondo Negro -->
                 <div class="fluitek-logo-badge text-xl px-3.5 py-1 rounded shadow-md border border-slate-700">
                     FLUITEK
                 </div>
@@ -186,7 +184,6 @@ fluitek_app_html = """
         <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
             <div class="flex justify-between items-start border-b pb-4 mb-6">
                 <div>
-                    <!-- Logo Fluitek en Informe: Letras Blancas sobre Fondo Negro -->
                     <div class="fluitek-logo-badge text-2xl px-4 py-1.5 rounded tracking-wider shadow">
                         FLUITEK CHILE
                     </div>
@@ -262,7 +259,7 @@ fluitek_app_html = """
 
     </main>
 
-    <!-- Modal Form: Dynamic New/Edit Report with OT -->
+    <!-- Modal Form: Dynamic New/Edit Report -->
     <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
@@ -278,7 +275,6 @@ fluitek_app_html = """
             <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
                 <input type="hidden" id="reportId">
 
-                <!-- Orden de Trabajo y Datos Principales -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Orden de Trabajo (OT) *</label>
@@ -313,7 +309,7 @@ fluitek_app_html = """
                         <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-slate-800 focus:outline-none">
                             <option value="NORMAL" class="text-emerald-600 font-bold">🟢 Normal</option>
                             <option value="MEDIA" class="text-amber-600 font-bold">🟡 Advertencia</option>
-                            <option value="ALTA" class="text-red-600 font-bold">🔴 Critica / Alarma</option>
+                            <option value="ALTA" class="text-red-600 font-bold">🔴 Crítica / Alarma</option>
                         </select>
                     </div>
                     <div>
@@ -322,7 +318,6 @@ fluitek_app_html = """
                     </div>
                 </div>
 
-                <!-- Parameters Grid -->
                 <div class="bg-slate-50 p-3 rounded-lg border">
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Mediciones y Parámetros Rápidos</span>
                     <div class="grid grid-cols-3 gap-3">
@@ -363,7 +358,7 @@ fluitek_app_html = """
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
+    <!-- JavaScript Logic -->
     <script>
         let reports = [];
 
@@ -585,25 +580,25 @@ fluitek_app_html = """
             if (!r) return;
 
             document.getElementById('reportId').value = r.id;
-            document.getElementById('modalTitle').innerText = `Editar Reporte: ${r.id}`;
             document.getElementById('inputOT').value = r.ot || '';
-            document.getElementById('inputCliente').value = r.cliente || '';
-            document.getElementById('inputFaena').value = r.faena || '';
-            document.getElementById('inputTag').value = r.tag || '';
-            document.getElementById('inputTipo').value = r.tipo || 'Monitoreo de Condición';
-            document.getElementById('inputCriticidad').value = r.criticidad || 'NORMAL';
-            document.getElementById('inputInspector').value = r.inspector || '';
+            document.getElementById('inputCliente').value = r.cliente;
+            document.getElementById('inputFaena').value = r.faena;
+            document.getElementById('inputTag').value = r.tag;
+            document.getElementById('inputTipo').value = r.tipo;
+            document.getElementById('inputCriticidad').value = r.criticidad;
+            document.getElementById('inputInspector').value = r.inspector;
             document.getElementById('inputTemp').value = r.temp !== '-' ? r.temp : '';
             document.getElementById('inputPresion').value = r.presion !== '-' ? r.presion : '';
             document.getElementById('inputISO').value = r.iso !== '-' ? r.iso : '';
-            document.getElementById('inputDiagnostico').value = r.diagnostico || '';
-            document.getElementById('inputRecomendaciones').value = r.recomendaciones || '';
+            document.getElementById('inputDiagnostico').value = r.diagnostico;
+            document.getElementById('inputRecomendaciones').value = r.recomendaciones;
 
+            document.getElementById('modalTitle').innerText = `Editar Reporte ${r.id}`;
             document.getElementById('reportModal').classList.remove('hidden');
         }
 
         function deleteReport(id) {
-            if (confirm(`¿Está seguro de que desea eliminar el reporte ${id}?`)) {
+            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
                 reports = reports.filter(r => r.id !== id);
                 saveToStorage();
                 renderReports();
@@ -628,19 +623,19 @@ fluitek_app_html = """
             document.getElementById('previewPresion').innerText = r.presion;
             document.getElementById('previewISO').innerText = r.iso;
 
-            document.getElementById('previewDiagnostico').innerText = r.diagnostico || 'Sin observaciones.';
-            document.getElementById('previewRecomendaciones').innerText = r.recomendaciones || 'Sin recomendaciones.';
+            document.getElementById('previewDiagnostico').innerText = r.diagnostico;
+            document.getElementById('previewRecomendaciones').innerText = r.recomendaciones;
 
             const badge = document.getElementById('previewBadgeCriticidad');
             if (r.criticidad === 'ALTA') {
                 badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-100 text-red-800 border border-red-300";
-                badge.innerText = "CRITICIDAD ALTA / ALARMA";
+                badge.innerText = "🔴 CRITICIDAD ALTA / ALARMA";
             } else if (r.criticidad === 'MEDIA') {
                 badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-100 text-amber-800 border border-amber-300";
-                badge.innerText = "CRITICIDAD MEDIA / ADVERTENCIA";
+                badge.innerText = "🟡 CRITICIDAD MEDIA / ADVERTENCIA";
             } else {
                 badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-100 text-emerald-800 border border-emerald-300";
-                badge.innerText = "CONDICIÓN NORMAL";
+                badge.innerText = "🟢 CONDICIÓN NORMAL";
             }
 
             const container = document.getElementById('printPreviewContainer');
@@ -654,32 +649,34 @@ fluitek_app_html = """
 
         function exportDataCSV() {
             if (reports.length === 0) {
-                alert('No hay datos para exportar.');
+                alert("No hay datos para exportar.");
                 return;
             }
-            const headers = ["Folio", "Fecha", "Orden de Trabajo", "Cliente", "Faena", "Tag", "Tipo Servicio", "Criticidad", "Inspector", "Temp (C)", "Presion (PSI)", "Codigo ISO", "Diagnostico", "Recomendaciones"];
-            const rows = reports.map(r => [
-                `"${r.id}"`,
-                `"${r.fecha}"`,
-                `"${r.ot || ''}"`,
-                `"${r.cliente}"`,
-                `"${r.faena}"`,
-                `"${r.tag}"`,
-                `"${r.tipo}"`,
-                `"${r.criticidad}"`,
-                `"${r.inspector}"`,
-                `"${r.temp}"`,
-                `"${r.presion}"`,
-                `"${r.iso}"`,
-                `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
-                `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
-            ]);
+            let csvContent = "data:text/csv;charset=utf-8,ID,OT,Fecha,Cliente,Faena,Tag,Tipo,Criticidad,Inspector,Temp_C,Presion_PSI,ISO_4406,Diagnostico,Recomendaciones\n";
+            reports.forEach(r => {
+                let row = [
+                    `"${r.id}"`,
+                    `"${r.ot || ''}"`,
+                    `"${r.fecha}"`,
+                    `"${r.cliente}"`,
+                    `"${r.faena}"`,
+                    `"${r.tag}"`,
+                    `"${r.tipo}"`,
+                    `"${r.criticidad}"`,
+                    `"${r.inspector}"`,
+                    `"${r.temp}"`,
+                    `"${r.presion}"`,
+                    `"${r.iso}"`,
+                    `"${(r.diagnostico || '').replace(/"/g, '""')}"`,
+                    `"${(r.recomendaciones || '').replace(/"/g, '""')}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
 
-            const csvContent = "data:text/csv;charset=utf-8,\\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\\n");
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Reportes_Fluitek_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", `reportes_fluitek_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -689,5 +686,5 @@ fluitek_app_html = """
 </html>
 """
 
-# Renderizar el componente en la app de Streamlit
-components.html(fluitek_app_html, height=1000, scrolling=True)
+# Renderizado de la app dentro del entorno de Streamlit
+components.html(fluitek_app_html, height=900, scrolling=True)
