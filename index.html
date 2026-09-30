@@ -1,684 +1,300 @@
-import streamlit as st
-import streamlit.components.v1 as components
-
-# Configuración de la página en Streamlit
-st.set_page_config(
-    page_title="Fluitek - Reportes Técnicos",
-    page_icon="⚙️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Código HTML, CSS y JavaScript encapsulado en una cadena multilínea de Python
-fluitek_app_html = """
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluitek - Sistema de Reportes Técnicos y Monitoreo</title>
-    <!-- Tailwind CSS -->
+    <title>APEX CBM Enterprise - Monitoreo de Condiciones</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- ECharts CDN para Gráficos Corporativos -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        fluitek: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            700: '#075985',
-                            800: '#0c4a6e',
-                            900: '#0a3651',
-                        }
+                        brand: { 50: '#f0f9ff', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        status: { ok: '#10b981', warn: '#f59e0b', danger: '#ef4444' }
                     }
                 }
             }
         }
     </script>
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white; color: black; }
-            .print-card { border: 1px solid #ccc; box-shadow: none !important; }
-            .img-print { max-height: 220px; object-fit: contain; }
-        }
-        .print-only { display: none; }
-        /* Estilo distintivo para marca Fluitek */
-        .fluitek-logo-badge {
-            background-color: #000000;
-            color: #ffffff;
-            font-weight: 900;
-            letter-spacing: 0.05em;
-            display: inline-block;
-        }
-    </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
+<body class="h-full flex overflow-hidden font-sans antialiased selection:bg-brand-500 selection:text-white">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-slate-900 text-white shadow-lg no-print sticky top-0 z-50 border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="fluitek-logo-badge text-xl px-3.5 py-1 rounded shadow-md border border-slate-700">
-                    FLUITEK
+    <!-- SIDEBAR CORPORATIVO -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0">
+        <div>
+            <!-- Branding / Logo Area -->
+            <div class="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
+                <div class="p-2 bg-brand-500/10 rounded-lg border border-brand-500/20 text-brand-500">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold leading-tight text-white">Field & Technical Reports</h1>
-                    <p class="text-xs text-slate-400">Gestión de Inspecciones, Fluidos & Monitoreo de Condición</p>
+                    <h1 class="font-bold text-base tracking-wide text-white">APEX <span class="text-brand-500">CBM</span></h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Reliability Suite v4.2</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-3">
-                <button onclick="openNewReportModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center shadow">
-                    <i class="fa-solid fa-plus-circle mr-2"></i> Nuevo Reporte / OT
+
+            <!-- Navegación Principal -->
+            <nav class="p-4 space-y-1">
+                <div class="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Monitoreo & Control</div>
+                
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-500/10 text-brand-500 font-medium border border-brand-500/20 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span>Dashboard Operacional</span>
+                </a>
+                
+                <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="waves" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                        <span>Análisis de Vibraciones</span>
+                    </div>
+                    <span class="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">ISO</span>
+                </a>
+
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <i data-lucide="thermometer" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                    <span>Termografía (Delta T)</span>
+                </a>
+
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <i data-lucide="droplet" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                    <span>Tribología & Aceites</span>
+                </a>
+
+                <div class="pt-4 px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Gestión & Avisos</div>
+
+                <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="grid" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                        <span>Matriz de Criticidad</span>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-status-danger"></span>
+                </a>
+
+                <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="bell" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                        <span>Backlog de Avisos</span>
+                    </div>
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-bold">4 Críticos</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Perfil Usuario / Planta -->
+        <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-sm text-brand-500">
+                    NB
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-xs font-semibold text-white truncate">Ing. Confiabilidad</p>
+                    <p class="text-[11px] text-slate-400 truncate">Planta Concentradora</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        <!-- HEADER TOP BAR -->
+        <header class="h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-8 z-10">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span>Planta Concentradora</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    <span class="text-white font-medium">Área Molienda & Chancado</span>
+                </div>
+            </div>
+
+            <!-- Acciones y Filtros Globales -->
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-status-ok animate-pulse"></span>
+                    <span class="text-slate-300 font-mono">SCADA: ONLINE</span>
+                </div>
+                <button class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-brand-600/20 flex items-center gap-2 transition-all">
+                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                    <span>Exportar Reporte Ejecutivo</span>
                 </button>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- Main Content Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-
-        <!-- KPI Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-slate-900 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Total Reportes</p>
-                    <h3 id="kpi-total" class="text-2xl font-bold text-slate-800">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Criticidad Alta / Alarma</p>
-                    <h3 id="kpi-critical" class="text-2xl font-bold text-red-600">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">En Advertencia</p>
-                    <h3 id="kpi-warning" class="text-2xl font-bold text-amber-600">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500 flex justify-between items-center">
-                <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Condición Normal</p>
-                    <h3 id="kpi-normal" class="text-2xl font-bold text-emerald-600">0</h3>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter & Search Controls -->
-        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
-            <div class="flex flex-1 gap-3 w-full md:w-auto">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderReports()" placeholder="Buscar por OT, Cliente, Tag, Inspector..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                </div>
-                <select id="filterSeverity" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                    <option value="ALL">Todas las Criticidades</option>
-                    <option value="ALTA">Alta / Alarma</option>
-                    <option value="MEDIA">Advertencia</option>
-                    <option value="NORMAL">Normal</option>
-                </select>
-                <select id="filterType" onchange="renderReports()" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                    <option value="ALL">Todos los Tipos</option>
-                    <option value="Monitoreo de Condición">Monitoreo de Condición</option>
-                    <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
-                    <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
-                    <option value="Inspección General">Inspección General</option>
-                </select>
-            </div>
-            <button onclick="loadSampleData()" class="text-xs text-slate-600 hover:text-black underline font-medium">
-                <i class="fa-solid fa-rotate-left mr-1"></i> Cargar Datos de Ejemplo
-            </button>
-        </div>
-
-        <!-- Reports Table View -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden no-print">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b">
-                            <th class="p-4">Folio / OT / Fecha</th>
-                            <th class="p-4">Cliente / Faena</th>
-                            <th class="p-4">Equipo / Tag</th>
-                            <th class="p-4">Tipo de Servicio</th>
-                            <th class="p-4">Criticidad</th>
-                            <th class="p-4">Inspector</th>
-                            <th class="p-4 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reportsTableBody" class="divide-y text-sm">
-                        <!-- Dynamic Rows -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyState" class="p-8 text-center text-slate-500 hidden">
-                <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
-                <p>No se encontraron reportes con los filtros seleccionados.</p>
-            </div>
-        </div>
-
-        <!-- Printable Official Report View -->
-        <div id="printPreviewContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border my-6 print-card">
-            <div class="flex justify-between items-start border-b pb-4 mb-6">
-                <div>
-                    <div class="fluitek-logo-badge text-2xl px-4 py-1.5 rounded tracking-wider shadow">
-                        FLUITEK CHILE
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-950">
+            
+            <!-- TARJETAS DE KPIS PRINCIPALES -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Salud Global Planta</span>
+                        <i data-lucide="shield-check" class="w-5 h-5 text-status-ok"></i>
                     </div>
-                    <p class="text-xs text-slate-500 mt-2">Servicios de Ingeniería, Fluidos y Mantenimiento Predictivo</p>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">91.4%</span>
+                        <span class="text-xs font-bold text-status-ok flex items-center">+1.2%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-status-ok h-full rounded-full" style="width: 91.4%"></div>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <span id="previewFolio" class="text-lg font-bold text-slate-800">FOLIO: FLT-2026-001</span>
-                    <p id="previewFecha" class="text-xs text-slate-500">Fecha: 06/09/2026</p>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg mb-6 border text-xs">
-                <div>
-                    <p><strong class="text-slate-700">Orden de Trabajo (OT):</strong> <span id="previewOT" class="font-bold text-amber-700">-</span></p>
-                    <p><strong class="text-slate-700">Cliente:</strong> <span id="previewCliente">-</span></p>
-                    <p><strong class="text-slate-700">Faena / Planta:</strong> <span id="previewFaena">-</span></p>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Equipos en Peligro</span>
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-status-danger"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">3</span>
+                        <span class="text-xs text-slate-400">de 42 activos</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-status-danger h-full rounded-full" style="width: 12%"></div>
+                    </div>
                 </div>
-                <div>
-                    <p><strong class="text-slate-700">Equipo / Tag:</strong> <span id="previewTag">-</span></p>
-                    <p><strong class="text-slate-700">Tipo Servicio:</strong> <span id="previewTipo">-</span></p>
-                    <p><strong class="text-slate-700">Inspector Fluitek:</strong> <span id="previewInspector">-</span></p>
+
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Avisos Pendientes</span>
+                        <i data-lucide="clock" class="w-5 h-5 text-status-warn"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">14</span>
+                        <span class="text-xs text-status-warn font-semibold">8 Aprobados</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-status-warn h-full rounded-full" style="width: 45%"></div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">ESTADO & CRITICIDAD DEL EQUIPO</h4>
-                <div id="previewBadgeCriticidad" class="inline-block px-4 py-2 rounded font-bold text-sm mb-2">
-                    CRITICIDAD ALTA
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">DIAGNÓSTICO TÉCNICO & HALLAZGOS</h4>
-                <p id="previewDiagnostico" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 p-3 rounded border">
-                    Sin observaciones registradas.
-                </p>
-            </div>
-
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">RECOMENDACIONES DE ACCIÓN</h4>
-                <p id="previewRecomendaciones" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed bg-amber-50/50 p-3 rounded border border-amber-200">
-                    Sin recomendaciones.
-                </p>
-            </div>
-
-            <!-- Evidencia Fotográfica en Reporte PDF -->
-            <div class="mb-6">
-                <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">EVIDENCIA FOTOGRÁFICA DE CAMPO</h4>
-                <div id="previewImagesContainer" class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-                    <!-- Imágenes renderizadas dinámicamente -->
-                </div>
-                <p id="noImagesText" class="text-xs text-slate-400 italic hidden">No se adjuntaron fotografías a este reporte.</p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t text-center text-xs">
-                <div>
-                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Firma Inspector</div>
-                    <p class="font-bold" id="previewFirmaTecnico">Técnico Fluitek</p>
-                    <p class="text-slate-500">Especialista en Monitoreo de Condición</p>
-                </div>
-                <div>
-                    <div class="border-b border-slate-400 mb-2 h-12 flex items-end justify-center pb-1 text-slate-600">Aprobación Cliente</div>
-                    <p class="font-bold">Recepción Cliente / Supervisión</p>
-                    <p class="text-slate-500">Conforme / Notificado</p>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Cumplimiento CBM</span>
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-brand-500"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">98.5%</span>
+                        <span class="text-xs text-slate-400">Rondas al día</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-brand-500 h-full rounded-full" style="width: 98.5%"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-8 flex justify-end gap-3 no-print">
-                <button onclick="closePreview()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">
-                    Cerrar Vista Previa
-                </button>
-                <button onclick="window.print()" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-black flex items-center shadow">
-                    <i class="fa-solid fa-print mr-2"></i> Imprimir / Exportar PDF
-                </button>
-            </div>
-        </div>
+            <!-- SECCIÓN CENTRAL DE GRÁFICOS INTERACTIVOS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- MAPA DE CALOR OPERACIONAL -->
+                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-100">Matriz de Salud Operacional (Heatmap)</h3>
+                            <p class="text-xs text-slate-400">Estado técnico de activos cruzado por disciplina CBM</p>
+                        </div>
+                        <span class="text-xs font-semibold bg-slate-800 text-slate-300 px-3 py-1 rounded-lg border border-slate-700">
+                            En Tiempo Real
+                        </span>
+                    </div>
+                    <div id="heatmapChart" class="w-full h-80 flex-1"></div>
+                </div>
 
-    </main>
-
-    <!-- Modal Form: Dynamic New/Edit Report -->
-    <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
-                <h3 class="font-bold text-lg flex items-center">
-                    <span class="fluitek-logo-badge text-xs px-2 py-0.5 rounded mr-2">FLUITEK</span> 
-                    <span id="modalTitle">Nuevo Reporte - Orden de Trabajo</span>
-                </h3>
-                <button onclick="closeReportModal()" class="text-slate-300 hover:text-white text-xl">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-
-            <form id="reportForm" onsubmit="saveReport(event)" class="p-6 space-y-4">
-                <input type="hidden" id="reportId">
-
-                <!-- Orden de Trabajo y Datos Principales -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- GAUGE ISO VIBRACIONES DE ACTIVO CRÍTICO -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Orden de Trabajo (OT) *</label>
-                        <input type="text" id="inputOT" required placeholder="Ej: OT-10492" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none font-semibold text-amber-700">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-brand-500 uppercase">Activo Bajo Análisis</span>
+                            <span class="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded border border-red-500/20 font-bold">ALTA CRITICIDAD</span>
+                        </div>
+                        <h3 class="font-bold text-lg text-white">Molino SAG 01 (MOL-001)</h3>
+                        <p class="text-xs text-slate-400">Vibración Global RMS vs Norma ISO 10816</p>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Cliente *</label>
-                        <input type="text" id="inputCliente" required placeholder="Ej: Minera Candelaria" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Faena / Planta *</label>
-                        <input type="text" id="inputFaena" required placeholder="Ej: Planta Concentradora" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Equipo / Tag ID *</label>
-                        <input type="text" id="inputTag" required placeholder="Ej: RED-9000-A" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Servicio</label>
-                        <select id="inputTipo" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                            <option value="Monitoreo de Condición">Monitoreo de Condición</option>
-                            <option value="Análisis de Aceite / Fluidos">Análisis de Aceite / Fluidos</option>
-                            <option value="Mantenimiento Hidráulico">Mantenimiento Hidráulico</option>
-                            <option value="Inspección General">Inspección General</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nivel de Criticidad</label>
-                        <select id="inputCriticidad" class="w-full p-2 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-slate-800 focus:outline-none">
-                            <option value="NORMAL" class="text-emerald-600 font-bold">🟢 Normal</option>
-                            <option value="MEDIA" class="text-amber-600 font-bold">🟡 Advertencia</option>
-                            <option value="ALTA" class="text-red-600 font-bold">🔴 Critica / Alarma</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Inspector Responsable *</label>
-                        <input type="text" id="inputInspector" required placeholder="Nombre del Técnico" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none">
+                    <div id="gaugeChart" class="w-full h-56"></div>
+
+                    <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80 flex items-center justify-between text-xs">
+                        <span class="text-slate-400">Diagnóstico:</span>
+                        <span class="font-bold text-status-danger">Transición a Zona D (Desbalance)</span>
                     </div>
                 </div>
+            </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Diagnóstico Técnico y Hallazgos *</label>
-                    <textarea id="inputDiagnostico" rows="3" required placeholder="Describa el estado actual del equipo, nivel de contaminantes, ruidos anómalos o fugas detectadas..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Recomendaciones y Acciones Correctivas</label>
-                    <textarea id="inputRecomendaciones" rows="2" placeholder="Ej: Realizar cambio de elementos filtrantes en la próxima parada de mantenimiento..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-slate-800 focus:outline-none"></textarea>
-                </div>
-
-                <!-- Adjuntar Imagen de Evidencia -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Adjuntar Evidencia Fotográfica (JPG, PNG)</label>
-                    <input type="file" id="inputImages" accept="image/*" multiple onchange="handleImageUpload(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 border rounded-lg cursor-pointer">
-                    
-                    <!-- Previsualización en el Modal -->
-                    <div id="modalImagePreview" class="flex flex-wrap gap-3 mt-3">
-                        <!-- Thumbnails -->
-                    </div>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-4 border-t">
-                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="px-5 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-black shadow flex items-center">
-                        <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Reporte
-                    </button>
-                </div>
-            </form>
-        </div>
+        </main>
     </div>
 
-    <!-- JavaScript Application Logic -->
+    <!-- SCRIPT DE CONFIGURACIÓN DE GRÁFICOS (ECHARTS) -->
     <script>
-        let reports = [];
-        let currentUploadedImages = []; // Array temporal de Base64 para el modal
+        lucide.createIcons();
 
-        const sampleReports = [
-            {
-                id: "FLT-2026-001",
-                ot: "OT-88412",
-                fecha: "2026-09-05 14:30",
-                cliente: "Minera Pelambres",
-                faena: "Planta Concentradora",
-                tag: "BOMBA-HYD-04",
-                tipo: "Monitoreo de Condición",
-                criticidad: "ALTA",
-                inspector: "Carlos Mendoza",
-                diagnostico: "Presencia de partículas metálicas en la muestra de drenaje. Elevada temperatura de funcionamiento en el bloque hidráulico principal.",
-                recomendaciones: "Reemplazo inmediato de filtros de retorno y programación de diálisis de fluido lubricante dentro de 48 horas.",
-                imagenes: []
-            },
-            {
-                id: "FLT-2026-002",
-                ot: "OT-88413",
-                fecha: "2026-09-06 09:15",
-                cliente: "Atacama Minerals",
-                faena: "Mina Subterránea",
-                tag: "RED-PARAMAX-9000",
-                tipo: "Análisis de Aceite / Fluidos",
-                criticidad: "MEDIA",
-                inspector: "Andrea Rojas",
-                diagnostico: "Viscosidad del aceite ligeramente fuera de rango óptimo por degradación térmica moderada.",
-                recomendaciones: "Tomar nueva muestra de seguimiento en 15 días y verificar sellos de respiradero.",
-                imagenes: []
-            }
+        // 1. Gráfico Heatmap (Matriz de Salud)
+        const heatmapDom = document.getElementById('heatmapChart');
+        const heatmapChart = echarts.init(heatmapDom, 'dark');
+        
+        const hours = ['Molino SAG', 'Molino Bolas 1', 'Chancador Prim.', 'Bomba Slurry A', 'Bomba Slurry B'];
+        const days = ['Vibraciones', 'Termografía', 'Tribología (Aceites)'];
+
+        const data = [
+            [0,0,3], [1,0,1], [2,0,2], [3,0,1], [4,0,2],
+            [0,1,1], [1,1,2], [2,1,3], [3,1,1], [4,1,1],
+            [0,2,2], [1,2,1], [2,2,1], [3,2,3], [4,2,1]
         ];
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('fluitek_reports');
-            if (saved) {
-                try {
-                    reports = JSON.parse(saved);
-                } catch(e) {
-                    reports = sampleReports;
-                }
-            } else {
-                reports = sampleReports;
-                saveToStorage();
-            }
-            renderReports();
-        });
+        const optionHeatmap = {
+            backgroundColor: 'transparent',
+            tooltip: { position: 'top' },
+            grid: { top: '10%', bottom: '15%', left: '15%', right: '5%' },
+            xAxis: { type: 'category', data: hours, splitArea: { show: true }, axisLabel: { color: '#94a3b8' } },
+            yAxis: { type: 'category', data: days, splitArea: { show: true }, axisLabel: { color: '#94a3b8' } },
+            visualMap: {
+                min: 1, max: 3,
+                calculable: false, orient: 'horizontal', left: 'center', bottom: '0%',
+                inRange: { color: ['#10b981', '#f59e0b', '#ef4444'] },
+                text: ['Crítico', 'Normal'], textStyle: { color: '#94a3b8' }
+            },
+            series: [{
+                name: 'Estado CBM', type: 'heatmap', data: data,
+                label: { show: true, formatter: (p) => p.data[2] === 3 ? 'CRÍTICO' : (p.data[2] === 2 ? 'ALERTA' : 'OK') },
+                itemStyle: { borderRadius: 4, borderWidth: 2, borderColor: '#0f172a' }
+            }]
+        };
+        heatmapChart.setOption(optionHeatmap);
 
-        function saveToStorage() {
-            localStorage.setItem('fluitek_reports', JSON.stringify(reports));
-        }
+        // 2. Gráfico Gauge ISO 10816
+        const gaugeDom = document.getElementById('gaugeChart');
+        const gaugeChart = echarts.init(gaugeDom, 'dark');
 
-        function loadSampleData() {
-            reports = [...sampleReports];
-            saveToStorage();
-            renderReports();
-        }
-
-        function renderReports() {
-            const tbody = document.getElementById('reportsTableBody');
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const severity = document.getElementById('filterSeverity').value;
-            const type = document.getElementById('filterType').value;
-
-            tbody.innerHTML = '';
-
-            let filtered = reports.filter(r => {
-                const matchesSearch = r.cliente.toLowerCase().includes(search) || 
-                                     r.tag.toLowerCase().includes(search) || 
-                                     r.inspector.toLowerCase().includes(search) ||
-                                     r.id.toLowerCase().includes(search) ||
-                                     (r.ot && r.ot.toLowerCase().includes(search));
-                const matchesSeverity = (severity === 'ALL') || (r.criticidad === severity);
-                const matchesType = (type === 'ALL') || (r.tipo === type);
-                return matchesSearch && matchesSeverity && matchesType;
-            });
-
-            document.getElementById('kpi-total').innerText = reports.length;
-            document.getElementById('kpi-critical').innerText = reports.filter(r => r.criticidad === 'ALTA').length;
-            document.getElementById('kpi-warning').innerText = reports.filter(r => r.criticidad === 'MEDIA').length;
-            document.getElementById('kpi-normal').innerText = reports.filter(r => r.criticidad === 'NORMAL').length;
-
-            if (filtered.length === 0) {
-                document.getElementById('emptyState').classList.remove('hidden');
-            } else {
-                document.getElementById('emptyState').classList.add('hidden');
-                
-                filtered.forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50 transition border-b";
-
-                    let badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
-                    let badgeIcon = "fa-circle-check";
-                    if (r.criticidad === 'ALTA') {
-                        badgeClass = "bg-red-100 text-red-800 border-red-300";
-                        badgeIcon = "fa-triangle-exclamation";
-                    } else if (r.criticidad === 'MEDIA') {
-                        badgeClass = "bg-amber-100 text-amber-800 border-amber-300";
-                        badgeIcon = "fa-circle-exclamation";
+        const optionGauge = {
+            backgroundColor: 'transparent',
+            series: [{
+                type: 'gauge',
+                startAngle: 180, endAngle: 0,
+                min: 0, max: 10,
+                pointer: { icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z', width: 6, length: '60%', offsetCenter: [0, '8%'], itemStyle: { color: '#ffffff' } },
+                axisLine: {
+                    lineStyle: {
+                        width: 18,
+                        color: [[0.28, '#10b981'], [0.45, '#f59e0b'], [0.71, '#f97316'], [1, '#ef4444']]
                     }
+                },
+                axisTick: { distance: -18, length: 6, lineStyle: { color: '#0f172a', width: 2 } },
+                splitLine: { distance: -18, length: 18, lineStyle: { color: '#0f172a', width: 3 } },
+                axisLabel: { color: '#94a3b8', distance: -35, fontSize: 10 },
+                detail: { valueAnimation: true, formatter: '{value} mm/s', color: '#ffffff', fontSize: 20, offsetCenter: [0, '35%'] },
+                data: [{ value: 7.8 }]
+            }]
+        };
+        gaugeChart.setOption(optionGauge);
 
-                    const hasImgs = r.imagenes && r.imagenes.length > 0;
-
-                    tr.innerHTML = `
-                        <td class="p-4">
-                            <span class="font-bold text-slate-900">${r.id}</span>
-                            <div class="text-xs font-semibold text-amber-600"><i class="fa-solid fa-hashtag mr-0.5"></i>OT: ${r.ot || 'N/A'}</div>
-                            <div class="text-xs text-slate-400">${r.fecha}</div>
-                        </td>
-                        <td class="p-4">
-                            <div class="font-semibold text-slate-800">${r.cliente}</div>
-                            <div class="text-xs text-slate-500">${r.faena}</div>
-                        </td>
-                        <td class="p-4">
-                            <span class="font-mono bg-slate-100 px-2 py-1 rounded text-xs border font-semibold text-slate-700">${r.tag}</span>
-                            ${hasImgs ? `<span class="ml-2 text-slate-400 text-xs" title="${r.imagenes.length} Imagen(es)"><i class="fa-solid fa-paperclip"></i> ${r.imagenes.length}</span>` : ''}
-                        </td>
-                        <td class="p-4 text-xs font-medium text-slate-600">${r.tipo}</td>
-                        <td class="p-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeClass}">
-                                <i class="fa-solid ${badgeIcon} mr-1.5 text-[10px]"></i> ${r.criticidad}
-                            </span>
-                        </td>
-                        <td class="p-4 text-xs text-slate-600">${r.inspector}</td>
-                        <td class="p-4 text-center">
-                            <div class="flex items-center justify-center space-x-2">
-                                <button onclick="previewReport('${r.id}')" title="Ver / Imprimir Informe" class="p-2 text-slate-800 hover:bg-slate-100 rounded-lg transition">
-                                    <i class="fa-solid fa-file-pdf text-base"></i>
-                                </button>
-                                <button onclick="editReport('${r.id}')" title="Editar" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <button onclick="deleteReport('${r.id}')" title="Eliminar" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-
-        // Manejo de Carga de Imágenes
-        function handleImageUpload(e) {
-            const files = Array.from(e.target.files);
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(uploadEvent) {
-                    currentUploadedImages.push(uploadEvent.target.result);
-                    renderModalImages();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function removeImage(index) {
-            currentUploadedImages.splice(index, 1);
-            renderModalImages();
-        }
-
-        function renderModalImages() {
-            const container = document.getElementById('modalImagePreview');
-            container.innerHTML = '';
-            currentUploadedImages.forEach((imgSrc, idx) => {
-                const div = document.createElement('div');
-                div.className = "relative w-20 h-20 border rounded-lg overflow-hidden group shadow-sm bg-slate-50";
-                div.innerHTML = `
-                    <img src="${imgSrc}" class="w-full h-full object-cover">
-                    <button type="button" onclick="removeImage(${idx})" class="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center opacity-90 hover:opacity-100 shadow">
-                        &times;
-                    </button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function openNewReportModal() {
-            document.getElementById('reportForm').reset();
-            document.getElementById('reportId').value = '';
-            currentUploadedImages = [];
-            renderModalImages();
-            document.getElementById('modalTitle').innerText = 'Nuevo Reporte - Orden de Trabajo';
-            document.getElementById('reportModal').classList.remove('hidden');
-        }
-
-        function closeReportModal() {
-            document.getElementById('reportModal').classList.add('hidden');
-        }
-
-        function saveReport(e) {
-            e.preventDefault();
-            const idInput = document.getElementById('reportId').value;
-            const now = new Date();
-            const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
-
-            const reportData = {
-                ot: document.getElementById('inputOT').value,
-                cliente: document.getElementById('inputCliente').value,
-                faena: document.getElementById('inputFaena').value,
-                tag: document.getElementById('inputTag').value,
-                tipo: document.getElementById('inputTipo').value,
-                criticidad: document.getElementById('inputCriticidad').value,
-                inspector: document.getElementById('inputInspector').value,
-                diagnostico: document.getElementById('inputDiagnostico').value,
-                recomendaciones: document.getElementById('inputRecomendaciones').value || 'Sin recomendaciones.',
-                imagenes: [...currentUploadedImages]
-            };
-
-            if (idInput) {
-                const index = reports.findIndex(r => r.id === idInput);
-                if (index !== -1) {
-                    reports[index] = {
-                        ...reports[index],
-                        ...reportData
-                    };
-                }
-            } else {
-                const newFolioNumber = reports.length + 1;
-                const newFolio = `FLT-2026-${String(newFolioNumber).padStart(3, '0')}`;
-                reports.unshift({
-                    id: newFolio,
-                    fecha: dateStr,
-                    ...reportData
-                });
-            }
-
-            saveToStorage();
-            renderReports();
-            closeReportModal();
-        }
-
-        function editReport(id) {
-            const report = reports.find(r => r.id === id);
-            if (!report) return;
-
-            document.getElementById('reportId').value = report.id;
-            document.getElementById('inputOT').value = report.ot || '';
-            document.getElementById('inputCliente').value = report.cliente;
-            document.getElementById('inputFaena').value = report.faena;
-            document.getElementById('inputTag').value = report.tag;
-            document.getElementById('inputTipo').value = report.tipo;
-            document.getElementById('inputCriticidad').value = report.criticidad;
-            document.getElementById('inputInspector').value = report.inspector;
-            document.getElementById('inputDiagnostico').value = report.diagnostico;
-            document.getElementById('inputRecomendaciones').value = report.recomendaciones;
-            
-            currentUploadedImages = report.imagenes ? [...report.imagenes] : [];
-            renderModalImages();
-
-            document.getElementById('modalTitle').innerText = `Editar Reporte ${report.id}`;
-            document.getElementById('reportModal').classList.remove('hidden');
-        }
-
-        function deleteReport(id) {
-            if (confirm(`¿Está seguro de eliminar el reporte ${id}?`)) {
-                reports = reports.filter(r => r.id !== id);
-                saveToStorage();
-                renderReports();
-            }
-        }
-
-        function previewReport(id) {
-            const r = reports.find(item => item.id === id);
-            if (!r) return;
-
-            document.getElementById('previewFolio').innerText = `FOLIO: ${r.id}`;
-            document.getElementById('previewFecha').innerText = `Fecha: ${r.fecha}`;
-            document.getElementById('previewOT').innerText = r.ot || 'N/A';
-            document.getElementById('previewCliente').innerText = r.cliente;
-            document.getElementById('previewFaena').innerText = r.faena;
-            document.getElementById('previewTag').innerText = r.tag;
-            document.getElementById('previewTipo').innerText = r.tipo;
-            document.getElementById('previewInspector').innerText = r.inspector;
-            document.getElementById('previewFirmaTecnico').innerText = r.inspector;
-            document.getElementById('previewDiagnostico').innerText = r.diagnostico;
-            document.getElementById('previewRecomendaciones').innerText = r.recomendaciones;
-
-            const badge = document.getElementById('previewBadgeCriticidad');
-            if (r.criticidad === 'ALTA') {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-red-100 text-red-800 border border-red-300";
-                badge.innerText = "🔴 CRITICIDAD ALTA / ALARMA";
-            } else if (r.criticidad === 'MEDIA') {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-amber-100 text-amber-800 border border-amber-300";
-                badge.innerText = "🟡 CRITICIDAD MEDIA / ADVERTENCIA";
-            } else {
-                badge.className = "inline-block px-4 py-2 rounded font-bold text-sm mb-2 bg-emerald-100 text-emerald-800 border border-emerald-300";
-                badge.innerText = "🟢 CRITICIDAD NORMAL / CONFORME";
-            }
-
-            // Renderizar Imágenes en la Vista de Impresión/PDF
-            const imgContainer = document.getElementById('previewImagesContainer');
-            const noImgText = document.getElementById('noImagesText');
-            imgContainer.innerHTML = '';
-
-            if (r.imagenes && r.imagenes.length > 0) {
-                noImgText.classList.add('hidden');
-                r.imagenes.forEach((src, i) => {
-                    const imgWrapper = document.createElement('div');
-                    imgWrapper.className = "border rounded-lg overflow-hidden bg-slate-50 p-1 flex flex-col items-center";
-                    imgWrapper.innerHTML = `
-                        <img src="${src}" class="w-full h-40 object-cover rounded img-print">
-                        <span class="text-[10px] text-slate-500 mt-1 font-semibold">Figura ${i + 1}: Registro Fotográfico de Campo</span>
-                    `;
-                    imgContainer.appendChild(imgWrapper);
-                });
-            } else {
-                noImgText.classList.remove('hidden');
-            }
-
-            document.getElementById('printPreviewContainer').classList.remove('hidden');
-            window.scrollTo({ top: document.getElementById('printPreviewContainer').offsetTop - 20, behavior: 'smooth' });
-        }
-
-        function closePreview() {
-            document.getElementById('printPreviewContainer').classList.add('hidden');
-        }
+        window.addEventListener('resize', () => {
+            heatmapChart.resize();
+            gaugeChart.resize();
+        });
     </script>
 </body>
 </html>
-"""
-
-# Renderizar en Streamlit
-components.html(fluitek_app_html, height=1000, scrolling=True)
