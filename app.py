@@ -1,282 +1,300 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import io
-
-# ==========================================
-# CONFIGURACIÓN DE PÁGINA Y ESTILOS
-# ==========================================
-st.set_page_config(
-    page_title="CBM Expert - Plataforma Integrada de Monitoreo",
-    page_icon="⚙️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Estilos CSS personalizados
-st.markdown("""
-<style>
-    .main { background-color: #F8FAFC; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; }
-</style>
-""", unsafe_allow_html=True)
-
-# ==========================================
-# MOTOR DE DATOS CBM & GENERACIÓN SINTÉTICA
-# ==========================================
-@st.cache_data
-def load_cbm_data():
-    np.random.seed(42)
-    activos = [
-        {"id": "MOL-001", "nombre": "Molino SAG 01", "area": "Molienda", "crit": "Alta"},
-        {"id": "MOL-002", "nombre": "Molino Bolas 01", "area": "Molienda", "crit": "Alta"},
-        {"id": "BOM-101", "nombre": "Bomba Slurry A", "area": "Flotación", "crit": "Media"},
-        {"id": "BOM-102", "nombre": "Bomba Slurry B", "area": "Flotación", "crit": "Media"},
-        {"id": "CHA-001", "nombre": "Chancador Primario", "area": "Chancado", "crit": "Alta"},
-        {"id": "CEN-201", "nombre": "Centrífuga 01", "area": "Lixiviación", "crit": "Baja"},
-    ]
-    dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
-    records = []
-    
-    for eq in activos:
-        base_vib = np.random.uniform(1.2, 2.5) if eq["crit"] != "Alta" else np.random.uniform(2.5, 4.5)
-        base_temp = np.random.uniform(45, 60)
-        base_fe = np.random.uniform(10, 25)
-        
-        for i, dt in enumerate(dates):
-            factor = (i / 30) ** 2 if eq["id"] in ["MOL-001", "BOM-101"] else 0.1
-            vib = base_vib + (factor * 4.5) + np.random.normal(0, 0.2)
-            temp = base_temp + (factor * 25) + np.random.normal(0, 1.0)
-            delta_t = (temp - 25.0) + np.random.normal(0, 0.5)
-            fe_ppm = base_fe + (factor * 60) + np.random.normal(0, 2.0)
-            viscosidad = 150 - (factor * 30) + np.random.normal(0, 1.5)
-            
-            records.append({
-                "fecha": dt,
-                "id_activo": eq["id"],
-                "nombre": eq["nombre"],
-                "area": eq["area"],
-                "criticidad_base": eq["crit"],
-                "vibracion_rms": round(max(0.5, vib), 2),
-                "temperatura_max": round(max(20.0, temp), 1),
-                "delta_t": round(max(0.0, delta_t), 1),
-                "aceite_fe_ppm": round(max(5.0, fe_ppm), 1),
-                "aceite_viscosidad": round(viscosidad, 1)
-            })
-            
-    return pd.DataFrame(records)
-
-df_cbm = load_cbm_data()
-
-# Base de datos de Avisos en Session State
-if 'avisos_db' not in st.session_state:
-    st.session_state['avisos_db'] = pd.DataFrame([
-        {
-            "id_aviso": "AV-2026-001",
-            "fecha_creacion": (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
-            "id_activo": "MOL-001",
-            "componente": "Rodamiento Lado Acople",
-            "disciplina": "Vibraciones",
-            "severidad": "Crítica",
-            "prioridad": "P1 - Inmediato",
-            "descripcion": "Exceso de velocidad RMS. Transición a Zona D (ISO 10816).",
-            "estado": "Abierto",
-            "responsable": "Analista CBM"
-        },
-        {
-            "id_aviso": "AV-2026-002",
-            "fecha_creacion": (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d"),
-            "id_activo": "BOM-101",
-            "componente": "Caja Reductora",
-            "disciplina": "Aceites",
-            "severidad": "Media",
-            "prioridad": "P2 - Programado",
-            "descripcion": "Incremento de partículas de desgaste (Fe > 70 ppm). Viscosidad fuera de rango.",
-            "estado": "En Proceso",
-            "responsable": "Técnico Tribología"
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APEX CBM Enterprise - Monitoreo de Condiciones</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- ECharts CDN para Gráficos Corporativos -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f9ff', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        status: { ok: '#10b981', warn: '#f59e0b', danger: '#ef4444' }
+                    }
+                }
+            }
         }
-    ])
+    </script>
+</head>
+<body class="h-full flex overflow-hidden font-sans antialiased selection:bg-brand-500 selection:text-white">
 
-# ==========================================
-# BARRA LATERAL - NAVEGACIÓN Y FILTROS
-# ==========================================
-st.sidebar.title("⚡ CBM Expert")
-st.sidebar.caption("Plataforma de Monitoreo Basado en la Condición")
+    <!-- SIDEBAR CORPORATIVO -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0">
+        <div>
+            <!-- Branding / Logo Area -->
+            <div class="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
+                <div class="p-2 bg-brand-500/10 rounded-lg border border-brand-500/20 text-brand-500">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-wide text-white">APEX <span class="text-brand-500">CBM</span></h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Reliability Suite v4.2</p>
+                </div>
+            </div>
 
-modulo = st.sidebar.radio(
-    "Módulos del Sistema:",
-    [
-        "🗺️ Mapa de Calor 3D & Salud",
-        "📈 Vibraciones & Espectro FFT",
-        "🌡️ Termografía (Delta T)",
-        "🧪 Control de Tribología",
-        "🚨 Matriz de Riesgo y Avisos",
-        "📄 Generación de Reportes"
-    ]
-)
+            <!-- Navegación Principal -->
+            <nav class="p-4 space-y-1">
+                <div class="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Monitoreo & Control</div>
+                
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-500/10 text-brand-500 font-medium border border-brand-500/20 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span>Dashboard Operacional</span>
+                </a>
+                
+                <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="waves" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                        <span>Análisis de Vibraciones</span>
+                    </div>
+                    <span class="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">ISO</span>
+                </a>
 
-st.sidebar.divider()
-st.sidebar.markdown("### Filtros Operacionales")
-area_selected = st.sidebar.multiselect(
-    "Filtrar por Área:",
-    options=df_cbm["area"].unique(),
-    default=df_cbm["area"].unique()
-)
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <i data-lucide="thermometer" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                    <span>Termografía (Delta T)</span>
+                </a>
 
-df_filtered = df_cbm[df_cbm["area"].isin(area_selected)]
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <i data-lucide="droplet" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                    <span>Tribología & Aceites</span>
+                </a>
 
-# ==========================================
-# MÓDULO 1: MAPA DE CALOR 3D & SALUD
-# ==========================================
-if modulo == "🗺️ Mapa de Calor 3D & Salud":
-    st.title("🗺️️ Mapa de Calor 3D y Salud Operacional")
-    st.markdown("Diagnóstico matricial tridimensional del estado de salud de activos planta.")
-    
-    latest_df = df_filtered.sort_values('fecha').groupby('id_activo').last().reset_index()
-    
-    def calc_estado(row):
-        if row['vibracion_rms'] > 7.1 or row['temperatura_max'] > 80 or row['aceite_fe_ppm'] > 70:
-            return 3  # Crítico
-        elif row['vibracion_rms'] > 4.5 or row['temperatura_max'] > 70 or row['aceite_fe_ppm'] > 45:
-            return 2  # Alerta
-        else:
-            return 1  # Normal
-            
-    latest_df['estado_num'] = latest_df.apply(calc_estado, axis=1)
-    
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Activos Monitoreados", len(latest_df))
-    c2.metric("Condición Normal", len(latest_df[latest_df['estado_num'] == 1]))
-    c3.metric("En Alerta", len(latest_df[latest_df['estado_num'] == 2]), delta_color="inverse")
-    c4.metric("Estado Crítico", len(latest_df[latest_df['estado_num'] == 3]), delta_color="inverse")
-    
-    st.divider()
-    
-    st.subheader("🌐 Matriz 3D de Severidad CBM (Vibración vs Temp vs Aceite)")
-    fig_3d = px.scatter_3d(
-        latest_df,
-        x='vibracion_rms',
-        y='temperatura_max',
-        z='aceite_fe_ppm',
-        color='estado_num',
-        size='vibracion_rms',
-        hover_name='nombre',
-        text='id_activo',
-        color_continuous_scale=[[0, '#2ECC71'], [0.5, '#F39C12'], [1, '#E74C3C']],
-        labels={'vibracion_rms': 'Vibración RMS (mm/s)', 'temperatura_max': 'Temp Max (°C)', 'aceite_fe_ppm': 'Hierro Fe (ppm)'}
-    )
-    fig_3d.update_layout(height=600, coloraxis_showscale=False)
-    st.plotly_chart(fig_3d, use_container_width=True)
+                <div class="pt-4 px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Gestión & Avisos</div>
 
-# ==========================================
-# MÓDULO 2: VIBRACIONES & FFT
-# ==========================================
-elif modulo == "📈 Vibraciones & Espectro FFT":
-    st.title("📈 Análisis de Vibraciones y Espectro FFT")
-    st.markdown("Evaluación conforme a norma *ISO 10816-3* y diagnóstico frecuencial.")
-    
-    equipo_sel = st.selectbox("Seleccionar Activo:", df_filtered["nombre"].unique())
-    df_eq = df_filtered[df_filtered["nombre"] == equipo_sel].sort_values("fecha")
-    
-    fig_vib = go.Figure()
-    fig_vib.add_trace(go.Scatter(x=df_eq['fecha'], y=df_eq['vibracion_rms'], mode='lines+markers', name='RMS (mm/s)', line=dict(color='#2980B9', width=3)))
-    fig_vib.add_hline(y=2.8, line_dash="dot", line_color="#F39C12", annotation_text="Alerta (Zona B/C)")
-    fig_vib.add_hline(y=4.5, line_dash="dash", line_color="#E67E22", annotation_text="Restringido (Zona C/D)")
-    fig_vib.add_hline(y=7.1, line_dash="solid", line_color="#C0392B", annotation_text="Inadmisible (Zona D)")
-    fig_vib.update_layout(title=f"Evolución RMS Global - {equipo_sel}", xaxis_title="Fecha", yaxis_title="Velocidad RMS (mm/s)", height=400)
-    st.plotly_chart(fig_vib, use_container_width=True)
-    
-    st.subheader("📊 Análisis Espectral FFT (Simulación en Tiempo Real)")
-    freqs = np.linspace(0, 500, 250)
-    amps = np.random.exponential(scale=0.2, size=250)
-    amps[25] += 3.5  # Armónico 1X
-    amps[50] += 2.1  # Armónico 2X
-    amps[120] += 1.8 # Paso de álabes/ BPF
-    
-    fig_fft = px.line(x=freqs, y=amps, labels={'x': 'Frecuencia (Hz)', 'y': 'Amplitud (mm/s PK)'}, title=f"Espectro FFT de Velocidad - {equipo_sel}")
-    fig_fft.update_traces(line_color='#8E44AD')
-    st.plotly_chart(fig_fft, use_container_width=True)
+                <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="grid" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                        <span>Matriz de Criticidad</span>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-status-danger"></span>
+                </a>
 
-# ==========================================
-# MÓDULO 3: TERMOGRAFÍA (DELTA T)
-# ==========================================
-elif modulo == "🌡️ Termografía (Delta T)":
-    st.title("🌡️ Diagnóstico Termográfico por Delta T")
-    st.markdown("Severidad analizada según el diferencial de temperatura sobre la temperatura ambiente ($\Delta T$).")
-    
-    equipo_sel = st.selectbox("Seleccionar Activo:", df_filtered["nombre"].unique())
-    df_eq = df_filtered[df_filtered["nombre"] == equipo_sel].sort_values("fecha")
-    
-    fig_temp = go.Figure()
-    fig_temp.add_trace(go.Bar(x=df_eq['fecha'], y=df_eq['delta_t'], name='Delta T (°C)', marker_color='#E67E22'))
-    fig_temp.add_hline(y=10, line_dash="dot", line_color="yellow", annotation_text="Etapa 1 (Ligero)")
-    fig_temp.add_hline(y=25, line_dash="dash", line_color="orange", annotation_text="Etapa 2 (Moderado)")
-    fig_temp.add_hline(y=40, line_dash="solid", line_color="red", annotation_text="Etapa 3 (Crítico)")
-    fig_temp.update_layout(title=f"Diferencial de Temperatura (Delta T) - {equipo_sel}", xaxis_title="Fecha", yaxis_title="Delta T (°C)", height=400)
-    st.plotly_chart(fig_temp, use_container_width=True)
+                <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium transition-all group">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="bell" class="w-5 h-5 text-slate-500 group-hover:text-brand-500"></i>
+                        <span>Backlog de Avisos</span>
+                    </div>
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-bold">4 Críticos</span>
+                </a>
+            </nav>
+        </div>
 
-# ==========================================
-# MÓDULO 4: CONTROL DE TRIBOLOGÍA
-# ==========================================
-elif modulo == "🧪 Control de Tribología":
-    st.title("🧪 Módulo de Control de Tribología")
-    st.markdown("Monitoreo de desgaste metálico por espectrometría y estabilidad del lubricante.")
-    
-    equipo_sel = st.selectbox("Seleccionar Activo:", df_filtered["nombre"].unique())
-    df_eq = df_filtered[df_filtered["nombre"] == equipo_sel].sort_values("fecha")
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        fig_fe = px.line(df_eq, x='fecha', y='aceite_fe_ppm', title="Contaminación por Hierro (Fe PPM)", markers=True)
-        fig_fe.add_hline(y=50, line_dash="dash", line_color="orange")
-        fig_fe.update_traces(line_color='#27AE60')
-        st.plotly_chart(fig_fe, use_container_width=True)
-    with c2:
-        fig_visc = px.line(df_eq, x='fecha', y='aceite_viscosidad', title="Viscosidad Cinemática @ 40°C (cSt)", markers=True)
-        fig_visc.add_hline(y=120, line_dash="dash", line_color="red")
-        fig_visc.update_traces(line_color='#2980B9')
-        st.plotly_chart(fig_visc, use_container_width=True)
+        <!-- Perfil Usuario / Planta -->
+        <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-sm text-brand-500">
+                    NB
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-xs font-semibold text-white truncate">Ing. Confiabilidad</p>
+                    <p class="text-[11px] text-slate-400 truncate">Planta Concentradora</p>
+                </div>
+            </div>
+        </div>
+    </aside>
 
-# ==========================================
-# MÓDULO 5: MATRIZ DE RIESGO Y AVISOS
-# ==========================================
-elif modulo == "🚨 Matriz de Riesgo y Avisos":
-    st.title("🚨 Matriz de Riesgo y Gestión de Avisos")
-    st.markdown("Gestión centralizada de órdenes de inspección y matriz operacional de riesgo.")
-    
-    st.subheader("Matriz de Riesgo CBM (Severidad vs Probabilidad)")
-    matriz_data = np.array([[1, 2, 3], [2, 4, 6], [3, 6, 9]])
-    fig_matriz = px.imshow(
-        matriz_data,
-        labels=dict(x="Probabilidad de Falla", y="Severidad del Impacto", color="Nivel de Riesgo"),
-        x=['Baja', 'Media', 'Alta'],
-        y=['Menor', 'Mayor', 'Crítico'],
-        color_continuous_scale='Reds'
-    )
-    fig_matriz.update_layout(height=350)
-    st.plotly_chart(fig_matriz, use_container_width=True)
-    
-    st.subheader("Avisos CBM Registrados")
-    st.dataframe(st.session_state['avisos_db'], use_container_width=True)
-
-# ==========================================
-# MÓDULO 6: GENERACIÓN DE REPORTES
-# ==========================================
-elif modulo == "📄 Generación de Reportes":
-    st.title("📄 Motor de Generación de Reportes CBM")
-    st.markdown("Exportación de matrices de datos y resúmenes ejecutivos.")
-    
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df_filtered.to_excel(writer, sheet_name='Lecturas_CBM', index=False)
-        st.session_state['avisos_db'].to_excel(writer, sheet_name='Avisos_Activos', index=False)
+    <!-- ÁREA PRINCIPAL -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-    st.download_button(
-        label="📥 Descargar Reporte Ejecutivo Completo (.xlsx)",
-        data=buffer.getvalue(),
-        file_name=f"Reporte_Ejecutivo_CBM_{datetime.now().strftime('%Y%m%d')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        <!-- HEADER TOP BAR -->
+        <header class="h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-8 z-10">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span>Planta Concentradora</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    <span class="text-white font-medium">Área Molienda & Chancado</span>
+                </div>
+            </div>
+
+            <!-- Acciones y Filtros Globales -->
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-status-ok animate-pulse"></span>
+                    <span class="text-slate-300 font-mono">SCADA: ONLINE</span>
+                </div>
+                <button class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-brand-600/20 flex items-center gap-2 transition-all">
+                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                    <span>Exportar Reporte Ejecutivo</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-950">
+            
+            <!-- TARJETAS DE KPIS PRINCIPALES -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Salud Global Planta</span>
+                        <i data-lucide="shield-check" class="w-5 h-5 text-status-ok"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">91.4%</span>
+                        <span class="text-xs font-bold text-status-ok flex items-center">+1.2%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-status-ok h-full rounded-full" style="width: 91.4%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Equipos en Peligro</span>
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-status-danger"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">3</span>
+                        <span class="text-xs text-slate-400">de 42 activos</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-status-danger h-full rounded-full" style="width: 12%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Avisos Pendientes</span>
+                        <i data-lucide="clock" class="w-5 h-5 text-status-warn"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">14</span>
+                        <span class="text-xs text-status-warn font-semibold">8 Aprobados</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-status-warn h-full rounded-full" style="width: 45%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Cumplimiento CBM</span>
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-brand-500"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-white">98.5%</span>
+                        <span class="text-xs text-slate-400">Rondas al día</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-brand-500 h-full rounded-full" style="width: 98.5%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN CENTRAL DE GRÁFICOS INTERACTIVOS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- MAPA DE CALOR OPERACIONAL -->
+                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-100">Matriz de Salud Operacional (Heatmap)</h3>
+                            <p class="text-xs text-slate-400">Estado técnico de activos cruzado por disciplina CBM</p>
+                        </div>
+                        <span class="text-xs font-semibold bg-slate-800 text-slate-300 px-3 py-1 rounded-lg border border-slate-700">
+                            En Tiempo Real
+                        </span>
+                    </div>
+                    <div id="heatmapChart" class="w-full h-80 flex-1"></div>
+                </div>
+
+                <!-- GAUGE ISO VIBRACIONES DE ACTIVO CRÍTICO -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-brand-500 uppercase">Activo Bajo Análisis</span>
+                            <span class="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded border border-red-500/20 font-bold">ALTA CRITICIDAD</span>
+                        </div>
+                        <h3 class="font-bold text-lg text-white">Molino SAG 01 (MOL-001)</h3>
+                        <p class="text-xs text-slate-400">Vibración Global RMS vs Norma ISO 10816</p>
+                    </div>
+
+                    <div id="gaugeChart" class="w-full h-56"></div>
+
+                    <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80 flex items-center justify-between text-xs">
+                        <span class="text-slate-400">Diagnóstico:</span>
+                        <span class="font-bold text-status-danger">Transición a Zona D (Desbalance)</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- SCRIPT DE CONFIGURACIÓN DE GRÁFICOS (ECHARTS) -->
+    <script>
+        lucide.createIcons();
+
+        // 1. Gráfico Heatmap (Matriz de Salud)
+        const heatmapDom = document.getElementById('heatmapChart');
+        const heatmapChart = echarts.init(heatmapDom, 'dark');
+        
+        const hours = ['Molino SAG', 'Molino Bolas 1', 'Chancador Prim.', 'Bomba Slurry A', 'Bomba Slurry B'];
+        const days = ['Vibraciones', 'Termografía', 'Tribología (Aceites)'];
+
+        const data = [
+            [0,0,3], [1,0,1], [2,0,2], [3,0,1], [4,0,2],
+            [0,1,1], [1,1,2], [2,1,3], [3,1,1], [4,1,1],
+            [0,2,2], [1,2,1], [2,2,1], [3,2,3], [4,2,1]
+        ];
+
+        const optionHeatmap = {
+            backgroundColor: 'transparent',
+            tooltip: { position: 'top' },
+            grid: { top: '10%', bottom: '15%', left: '15%', right: '5%' },
+            xAxis: { type: 'category', data: hours, splitArea: { show: true }, axisLabel: { color: '#94a3b8' } },
+            yAxis: { type: 'category', data: days, splitArea: { show: true }, axisLabel: { color: '#94a3b8' } },
+            visualMap: {
+                min: 1, max: 3,
+                calculable: false, orient: 'horizontal', left: 'center', bottom: '0%',
+                inRange: { color: ['#10b981', '#f59e0b', '#ef4444'] },
+                text: ['Crítico', 'Normal'], textStyle: { color: '#94a3b8' }
+            },
+            series: [{
+                name: 'Estado CBM', type: 'heatmap', data: data,
+                label: { show: true, formatter: (p) => p.data[2] === 3 ? 'CRÍTICO' : (p.data[2] === 2 ? 'ALERTA' : 'OK') },
+                itemStyle: { borderRadius: 4, borderWidth: 2, borderColor: '#0f172a' }
+            }]
+        };
+        heatmapChart.setOption(optionHeatmap);
+
+        // 2. Gráfico Gauge ISO 10816
+        const gaugeDom = document.getElementById('gaugeChart');
+        const gaugeChart = echarts.init(gaugeDom, 'dark');
+
+        const optionGauge = {
+            backgroundColor: 'transparent',
+            series: [{
+                type: 'gauge',
+                startAngle: 180, endAngle: 0,
+                min: 0, max: 10,
+                pointer: { icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z', width: 6, length: '60%', offsetCenter: [0, '8%'], itemStyle: { color: '#ffffff' } },
+                axisLine: {
+                    lineStyle: {
+                        width: 18,
+                        color: [[0.28, '#10b981'], [0.45, '#f59e0b'], [0.71, '#f97316'], [1, '#ef4444']]
+                    }
+                },
+                axisTick: { distance: -18, length: 6, lineStyle: { color: '#0f172a', width: 2 } },
+                splitLine: { distance: -18, length: 18, lineStyle: { color: '#0f172a', width: 3 } },
+                axisLabel: { color: '#94a3b8', distance: -35, fontSize: 10 },
+                detail: { valueAnimation: true, formatter: '{value} mm/s', color: '#ffffff', fontSize: 20, offsetCenter: [0, '35%'] },
+                data: [{ value: 7.8 }]
+            }]
+        };
+        gaugeChart.setOption(optionGauge);
+
+        window.addEventListener('resize', () => {
+            heatmapChart.resize();
+            gaugeChart.resize();
+        });
+    </script>
+</body>
+</html>
